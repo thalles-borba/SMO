@@ -266,11 +266,11 @@ export default function Overview({
   };
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-4 sm:space-y-5 w-full min-w-0">
       {/* ROW 1: 4 CLEAN WHITE KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
         {/* KPI 1: Faturamento */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors">
+        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
@@ -291,16 +291,16 @@ export default function Overview({
 
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
                 R$ {totalRevenues.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               </div>
               <div className="flex items-center gap-1.5 mt-2.5 text-xs">
                 <span className="font-semibold text-[#16A34A] tabular-nums">+12,5%</span>
-                <span className="text-[#71717A]">vs. mês anterior</span>
+                <span className="text-[#71717A] truncate">vs. mês anterior</span>
               </div>
             </div>
 
-            <div className="w-20 h-11 shrink-0">
+            <div className="w-16 sm:w-20 h-11 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueSpark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
                   <Bar dataKey="receitas" fill="#3795AE" radius={[3, 3, 0, 0]} opacity={0.85} />
@@ -311,7 +311,7 @@ export default function Overview({
         </div>
 
         {/* KPI 2: Meta Geral */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors">
+        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] text-[#16A34A] flex items-center justify-center shrink-0">
@@ -333,11 +333,11 @@ export default function Overview({
           </div>
 
           <div className="space-y-2.5">
-            <div className="flex items-baseline justify-between">
-              <div className="text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
                 {goalPercent}%
               </div>
-              <span className="text-xs text-[#71717A] tabular-nums">
+              <span className="text-xs text-[#71717A] tabular-nums truncate">
                 Meta R$ {monthlyGoal.toLocaleString('pt-BR')}
               </span>
             </div>
@@ -351,7 +351,7 @@ export default function Overview({
         </div>
 
         {/* KPI 3: Gasto com Materiais */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors">
+        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-[#FFFBEB] text-[#D97706] flex items-center justify-center shrink-0">
@@ -372,15 +372,15 @@ export default function Overview({
 
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
                 R$ {materialExpenses.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               </div>
-              <div className="mt-2.5 text-xs text-[#71717A] tabular-nums">
+              <div className="mt-2.5 text-xs text-[#71717A] tabular-nums truncate">
                 {materialExpensesCount} {materialExpensesCount === 1 ? 'lançamento' : 'lançamentos'} no período
               </div>
             </div>
 
-            <div className="w-20 h-11 shrink-0">
+            <div className="w-16 sm:w-20 h-11 shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={expenseSpark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
                   <Bar dataKey="despesas" fill="#D97706" radius={[3, 3, 0, 0]} opacity={0.75} />
@@ -391,7 +391,7 @@ export default function Overview({
         </div>
 
         {/* KPI 4: Margem Líquida */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors">
+        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-lg bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
@@ -399,11 +399,11 @@ export default function Overview({
               </div>
               <span className="text-[13px] font-medium text-[#52525B] truncate">Margem operacional</span>
             </div>
-            <span className="text-xs font-semibold text-[#3795AE] tabular-nums">{marginPercentage}%</span>
+            <span className="text-xs font-semibold text-[#3795AE] tabular-nums shrink-0">{marginPercentage}%</span>
           </div>
 
           <div className="space-y-2">
-            <div className="text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+            <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
               R$ {profitMarginVal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
             <div className="text-xs text-[#71717A]">
@@ -498,9 +498,9 @@ export default function Overview({
       </AnimatePresence>
 
       {/* ROW 2: ASYMMETRIC 2-COLUMN SPLIT (2/3 CHART + 1/3 DOCTOR RANKING) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-stretch">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-5 items-stretch min-w-0">
         {/* Left 2/3: Clean Traditional Financial Evolution Chart */}
-        <section className="xl:col-span-8 bg-white border border-[#EBEBED] rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
+        <section className="xl:col-span-8 bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
@@ -572,7 +572,7 @@ export default function Overview({
           )}
 
           {/* Clean Traditional Recharts Container */}
-          <div className="h-[250px] w-full">
+          <div className="h-[220px] sm:h-[250px] w-full min-w-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               {chartView === 'evolucao' ? (
                 <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -666,7 +666,7 @@ export default function Overview({
         </section>
 
         {/* Right 1/3: Doctor Ranking + 3-Metric Footer */}
-        <section className="xl:col-span-4 bg-white border border-[#EBEBED] rounded-2xl p-5 sm:p-6 flex flex-col justify-between">
+        <section className="xl:col-span-4 bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-w-0">
           <div>
             <div className="flex items-center justify-between gap-2 mb-5">
               <div>
@@ -746,35 +746,35 @@ export default function Overview({
 
           {/* 3-Column Summary Footer (Mirrors Reference Bottom Dividers) */}
           <div className="grid grid-cols-3 divide-x divide-[#F1F1F3] border-t border-[#F1F1F3] pt-4 mt-6">
-            <div className="pr-2">
-              <p className="text-[15px] font-semibold text-[#18181B] tabular-nums">{doctors.length}</p>
-              <p className="text-[11px] text-[#71717A] mt-0.5">Dentistas</p>
+            <div className="pr-2 min-w-0">
+              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">{doctors.length}</p>
+              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Dentistas</p>
             </div>
-            <div className="px-3">
-              <p className="text-[15px] font-semibold text-[#18181B] tabular-nums">
+            <div className="px-2 sm:px-3 min-w-0">
+              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">
                 R$ {avgTicket.toLocaleString('pt-BR')}
               </p>
-              <p className="text-[11px] text-[#71717A] mt-0.5">Ticket médio</p>
+              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Ticket médio</p>
             </div>
-            <div className="pl-3">
-              <p className="text-[15px] font-semibold text-[#18181B] tabular-nums">{avgConversion}%</p>
-              <p className="text-[11px] text-[#71717A] mt-0.5">Conversão</p>
+            <div className="pl-2 sm:pl-3 min-w-0">
+              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">{avgConversion}%</p>
+              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Conversão</p>
             </div>
           </div>
         </section>
       </div>
 
       {/* ROW 3: RECENT TRANSACTIONS TABLE CARD */}
-      <section className="bg-white border border-[#EBEBED] rounded-2xl overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F1F1F3]">
+      <section className="bg-white border border-[#EBEBED] rounded-2xl overflow-hidden min-w-0">
+        <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F1F1F3]">
           <div>
             <h2 className="font-display font-semibold text-[15px] text-[#18181B]">
               Lançamentos recentes
             </h2>
           </div>
 
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="relative flex-1 sm:flex-initial">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+            <div className="relative flex-1 min-w-[160px] sm:flex-initial">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A1A1AA]" />
               <input
                 type="text"
@@ -787,7 +787,7 @@ export default function Overview({
 
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+              className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
             >
               <Plus size={14} />
               <span>Adicionar</span>
@@ -804,7 +804,7 @@ export default function Overview({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#F8F8FA] border-b border-[#F1F1F3] text-[12px] font-medium text-[#71717A]">

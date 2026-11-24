@@ -215,42 +215,40 @@ export default function Doctors({
     <div className="space-y-6 max-w-[1400px] mx-auto w-full select-none">
       
       {/* Navigation Sub-Header Tabs */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-level-2 shadow-xs">
-        <div className="flex items-center gap-1.5 bg-level-1 p-1 rounded-xl w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-[#EBEBED]">
+        <div className="flex items-center gap-1 bg-[#F4F4F6] p-1 rounded-xl w-full sm:w-auto overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'overview'
-                ? 'bg-white text-primary shadow-xs'
-                : 'text-on-surface-variant hover:text-on-surface'
+                ? 'bg-white text-[#18181B] shadow-xs'
+                : 'text-[#71717A] hover:text-[#18181B]'
             }`}
           >
-            <Users size={15} />
+            <Users size={14} className={activeTab === 'overview' ? 'text-[#3795AE]' : ''} />
             <span>Desempenho & Metas</span>
           </button>
           <button
             onClick={() => setActiveTab('escala')}
-            className={`flex-1 sm:flex-initial px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
               activeTab === 'escala'
-                ? 'bg-white text-primary shadow-xs ring-1 ring-primary/20'
-                : 'text-on-surface-variant hover:text-on-surface'
+                ? 'bg-white text-[#18181B] shadow-xs'
+                : 'text-[#71717A] hover:text-[#18181B]'
             }`}
           >
-            <CalendarDays size={15} />
-            <span>Escala dos Consultórios</span>
-            <span className="bg-primary/10 text-primary text-[10px] font-extrabold px-1.5 py-0.2 rounded-full uppercase tracking-wider">
-              Procedimentos
-            </span>
+            <CalendarDays size={14} className={activeTab === 'escala' ? 'text-[#3795AE]' : ''} />
+            <span>Escala</span>
+            <span className="hidden sm:inline">dos Consultórios</span>
           </button>
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-3.5 py-2 bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold rounded-xl transition-all flex items-center gap-2 shadow-xs cursor-pointer"
+            className="w-full sm:w-auto justify-center px-3.5 py-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer"
           >
             <UserPlus size={15} />
-            <span>Cadastrar Dentista</span>
+            <span>Cadastrar dentista</span>
           </button>
         </div>
       </div>

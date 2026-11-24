@@ -605,8 +605,8 @@ export default function App() {
   // MINIMALIST LOGIN SCREEN
   if (!userRole) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex flex-col items-center justify-center p-6 select-none font-sans">
-        <div className="bg-white border border-[#EBEBED] p-8 rounded-2xl max-w-[380px] w-full space-y-6">
+      <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#FAFAFA] flex flex-col items-center justify-center px-4 py-6 select-none font-sans">
+        <div className="bg-white border border-[#EBEBED] p-6 sm:p-8 rounded-2xl max-w-[380px] w-full space-y-6">
           <div className="flex flex-col items-center text-center gap-3">
             <ClinicLogo className="w-12 h-12" />
             <div>
@@ -697,7 +697,7 @@ export default function App() {
   const headerMeta = getHeaderMeta();
 
   return (
-    <div className="bg-[#FAFAFA] text-[#18181B] min-h-screen flex font-sans">
+    <div className="bg-[#FAFAFA] text-[#18181B] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans">
       {/* Full-Height Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -714,15 +714,15 @@ export default function App() {
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col min-w-0 min-h-screen transition-all duration-200 ease-out ${
+        className={`flex-1 flex flex-col min-w-0 w-full min-h-[100dvh] transition-all duration-200 ease-out ${
           isCollapsed ? 'md:ml-[72px]' : 'md:ml-64'
         } ml-0`}
       >
         {/* Unified Minimalist Top Workspace Header */}
-        <header className="sticky top-0 z-20 bg-[#FAFAFA]/90 backdrop-blur-md border-b border-[#ECECEE]/80 px-4 sm:px-8 py-4">
-          <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
+        <header className="sticky top-0 z-20 bg-[#FAFAFA]/90 backdrop-blur-md border-b border-[#ECECEE]/80 px-3.5 sm:px-8 py-3 sm:py-4">
+          <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
             {/* Left: Mobile Trigger + Title & Quiet Subtitle */}
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
               <button
                 onClick={() => setMobileOpen(true)}
                 className="md:hidden w-9 h-9 rounded-xl bg-white border border-[#EBEBED] text-[#52525B] hover:text-[#18181B] flex items-center justify-center transition-colors cursor-pointer shrink-0"
@@ -731,18 +731,18 @@ export default function App() {
                 <Menu size={18} />
               </button>
 
-              <div className="min-w-0">
-                <h1 className="font-display font-semibold text-lg sm:text-[22px] text-[#18181B] tracking-[-0.02em] leading-tight truncate">
+              <div className="min-w-0 flex-1">
+                <h1 className="font-display font-semibold text-[15px] sm:text-[22px] text-[#18181B] tracking-[-0.02em] leading-tight truncate">
                   {headerMeta.title}
                 </h1>
-                <p className="text-xs text-[#71717A] mt-0.5 truncate">
+                <p className="text-[11px] sm:text-xs text-[#71717A] mt-0.5 truncate">
                   {headerMeta.subtitle}
                 </p>
               </div>
             </div>
 
             {/* Right: Minimalist Utility Controls */}
-            <div className="flex items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
               {/* Notifications Button & Popover */}
               <div className="relative">
                 <button
@@ -765,7 +765,7 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.98 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-11 w-80 bg-white border border-[#EBEBED] rounded-2xl shadow-lg z-50 overflow-hidden"
+                      className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-[64px] sm:top-11 sm:w-80 bg-white border border-[#EBEBED] rounded-2xl shadow-lg z-50 overflow-hidden"
                     >
                       <div className="px-4 py-3 border-b border-[#F1F1F3] flex justify-between items-center">
                         <span className="text-xs font-semibold text-[#18181B]">Alertas clínicos</span>
@@ -825,10 +825,11 @@ export default function App() {
               {activeTab === 'visao-geral' && (
                 <button
                   onClick={() => setQuickAddTrigger(prev => prev + 1)}
-                  className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 >
                   <Plus size={15} />
-                  <span>Novo lançamento</span>
+                  <span className="hidden sm:inline">Novo lançamento</span>
+                  <span className="sm:hidden">Novo</span>
                 </button>
               )}
             </div>
@@ -836,8 +837,8 @@ export default function App() {
         </header>
 
         {/* Main Active View Container */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8">
-          <div className="max-w-[1400px] mx-auto w-full">
+        <main className="flex-1 p-3.5 sm:p-6 md:p-8 min-w-0 w-full">
+          <div className="max-w-[1400px] mx-auto w-full min-w-0">
             {activeTab === 'visao-geral' && (
               <Overview
                 transactions={transactions}

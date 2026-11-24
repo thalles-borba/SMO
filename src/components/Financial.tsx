@@ -364,10 +364,10 @@ export default function Financial({
         </div>
 
         {/* Sub-Tabs Picker */}
-        <div className="bg-[#F4F4F6] p-1 rounded-xl flex items-center gap-1 self-stretch md:self-auto text-xs font-medium">
+        <div className="bg-[#F4F4F6] p-1 rounded-xl flex items-center gap-1 self-stretch md:self-auto text-xs font-medium overflow-x-auto max-w-full scrollbar-none">
           <button
             onClick={() => setActiveTab('dre')}
-            className={`flex-1 md:flex-initial px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === 'dre'
                 ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                 : 'text-[#71717A] hover:text-[#18181B]'
@@ -377,7 +377,7 @@ export default function Financial({
           </button>
           <button
             onClick={() => setActiveTab('caixa')}
-            className={`flex-1 md:flex-initial px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === 'caixa'
                 ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                 : 'text-[#71717A] hover:text-[#18181B]'
@@ -387,7 +387,7 @@ export default function Financial({
           </button>
           <button
             onClick={() => setActiveTab('fluxo')}
-            className={`flex-1 md:flex-initial px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
               activeTab === 'fluxo'
                 ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                 : 'text-[#71717A] hover:text-[#18181B]'
@@ -404,13 +404,13 @@ export default function Financial({
       {activeTab === 'dre' && (
         <div className="space-y-6">
           {/* Controls Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#EBEBED]">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-[#EBEBED]">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <span className="text-xs font-medium text-[#71717A]">Período</span>
-              <div className="flex items-center gap-1 bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium">
+              <div className="flex items-center gap-1 bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium overflow-x-auto max-w-full scrollbar-none">
                 <button
                   onClick={() => setDrePeriod('current_month')}
-                  className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer transition-all whitespace-nowrap ${
                     drePeriod === 'current_month'
                       ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                       : 'text-[#71717A] hover:text-[#18181B]'
@@ -420,7 +420,7 @@ export default function Financial({
                 </button>
                 <button
                   onClick={() => setDrePeriod('last_month')}
-                  className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer transition-all whitespace-nowrap ${
                     drePeriod === 'last_month'
                       ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                       : 'text-[#71717A] hover:text-[#18181B]'
@@ -430,7 +430,7 @@ export default function Financial({
                 </button>
                 <button
                   onClick={() => setDrePeriod('year')}
-                  className={`px-3 py-1.5 rounded-lg cursor-pointer transition-all ${
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg cursor-pointer transition-all whitespace-nowrap ${
                     drePeriod === 'year'
                       ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
                       : 'text-[#71717A] hover:text-[#18181B]'
@@ -441,16 +441,16 @@ export default function Financial({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto sm:justify-end">
               <button
                 onClick={() => setShowEditFixedModal(true)}
-                className="px-3.5 py-2 bg-white border border-[#E4E4E7] text-[#3F3F46] hover:bg-[#FAFAFA] rounded-xl text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 bg-white border border-[#E4E4E7] text-[#3F3F46] hover:bg-[#FAFAFA] rounded-xl text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 Despesas fixas & imposto ({taxRatePercent}%)
               </button>
               <button
                 onClick={handlePrintDRE}
-                className="px-3.5 py-2 bg-[#3795AE] text-white hover:bg-[#2B7E94] rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 bg-[#3795AE] text-white hover:bg-[#2B7E94] rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
               >
                 <Printer size={14} /> Imprimir DRE
               </button>

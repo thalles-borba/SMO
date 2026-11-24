@@ -343,8 +343,8 @@ export default function Sidebar({
 
       {/* MOBILE SIDEBAR DRAWER */}
       <aside
-        className={`fixed top-0 left-0 h-screen w-72 bg-[#F7F7F8] border-r border-[#ECECEE] z-50 transform transition-transform duration-200 ease-out md:hidden shadow-xl ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 left-0 h-[100dvh] w-[min(18rem,85vw)] bg-[#F7F7F8] border-r border-[#ECECEE] z-50 transform transition-transform duration-200 ease-out md:hidden shadow-xl ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >
         {navContent}

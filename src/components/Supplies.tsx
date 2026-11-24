@@ -458,17 +458,18 @@ export default function Supplies({
         </div>
 
         {/* Sub-Tab Selector Toggle */}
-        <div className="flex items-center bg-[#F4F4F6] p-1 rounded-xl border border-[#EBEBED] w-full sm:w-auto">
+        <div className="flex items-center bg-[#F4F4F6] p-1 rounded-xl border border-[#EBEBED] w-full sm:w-auto overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveSubTab('estoque')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               activeSubTab === 'estoque'
                 ? 'bg-white text-[#18181B] shadow-xs'
                 : 'text-[#71717A] hover:text-[#18181B]'
             }`}
           >
             <Boxes size={15} className={activeSubTab === 'estoque' ? 'text-[#3795AE]' : ''} />
-            <span>Estoque de materiais</span>
+            <span>Estoque</span>
+            <span className="hidden sm:inline">de materiais</span>
             {(expiredCount > 0 || expiringSoonCount > 0) && (
               <span className="bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA] text-[10px] px-1.5 py-0.5 rounded-full font-semibold tabular-nums">
                 {expiredCount + expiringSoonCount}
@@ -478,14 +479,15 @@ export default function Supplies({
 
           <button
             onClick={() => setActiveSubTab('compras')}
-            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
               activeSubTab === 'compras'
                 ? 'bg-white text-[#18181B] shadow-xs'
                 : 'text-[#71717A] hover:text-[#18181B]'
             }`}
           >
             <ShoppingBag size={15} className={activeSubTab === 'compras' ? 'text-[#3795AE]' : ''} />
-            <span>Lançamento de compras</span>
+            <span>Compras</span>
+            <span className="hidden sm:inline">realizadas</span>
           </button>
         </div>
       </div>
