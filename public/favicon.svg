@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="logoTealBg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2F8CA3" />
+      <stop offset="100%" stop-color="#3DA0B9" />
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="url(#logoTealBg)" />
+  <rect x="26" y="22" width="29" height="65" rx="1.5" fill="#FFFFFF" />
+  <rect x="59.5" y="12" width="13.5" height="65" rx="1.5" fill="#FFFFFF" />
+  <path d="M66.25 16.5 V23.5 M62.75 20 H69.75" stroke="#2F8CA3" stroke-width="2.5" stroke-linecap="square" />
+  <path d="M 34.5 40.5 C 34.5 37 38.5 35 44 37.5 C 47.5 39 48.5 40 49.5 40 C 50.5 40 51.5 39 55 37.5 C 60.5 35 64.5 37 64.5 40.5 C 64.5 48 65 52.5 61 71 C 59.5 78 57 78 55 70 C 53 62 52 57 49.5 57 C 47 57 46 62 44 70 C 42 78 39.5 78 38 71 C 34 52.5 34.5 48 34.5 40.5 Z" fill="#2F8CA3" />
+</svg>
