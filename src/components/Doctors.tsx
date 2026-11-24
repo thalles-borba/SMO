@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Doctor, Transaction } from '../types';
+import { UserRole } from '../lib/firebase';
 import { 
   Plus, 
   Stethoscope, 
@@ -32,6 +33,8 @@ interface DoctorsProps {
   onAddTransaction: (t: Omit<Transaction, 'id' | 'date'>) => void;
   onAddDoctor: (doc: Omit<Doctor, 'id'>) => void;
   onUpdateDoctorStats: (id: string, stats: { evaluations: number; closures: number; monthlyTarget: number }) => void;
+  userRole?: UserRole;
+  linkedDoctorId?: string;
 }
 
 export default function Doctors({ 
@@ -40,10 +43,26 @@ export default function Doctors({
   onUpdateTarget, 
   onAddTransaction,
   onAddDoctor,
-  onUpdateDoctorStats
+  onUpdateDoctorStats,
+  userRole = 'gestao',
+  linkedDoctorId
 }: DoctorsProps) {
-  const [selectedDocId, setSelectedDocId] = useState(doctors[0]?.id || '');
-  const [activeTab, setActiveTab] = useState<'overview' | 'escala'>('overview');
+  const isGestao = userRole === 'gestao';
+  const isFuncionario = userRole === 'funcionario';
+  const isDentista = userRole === 'dentista';
+
+  const visibleDoctors = isDentista
+    ? linkedDoctorId
+      ? doctors.filter(d => d.id === linkedDoctorId)
+      : []
+    : doctors;
+
+  const [selectedDocId, setSelectedDocId] = useState(
+    (isDentista && linkedDoctorId ? linkedDoctorId : visibleDoctors[0]?.id) || ''
+  );
+  const [activeTab, setActiveTab] = useState<'overview' | 'escala'>(
+    isFuncionario ? 'escala' : 'overview'
+  );
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetValue, setTargetValue] = useState('');
   const [customProcedure, setCustomProcedure] = useState('');
@@ -65,13 +84,29 @@ export default function Doctors({
   const [newDocEvaluations, setNewDocEvaluations] = useState('15');
   const [newDocClosures, setNewDocClosures] = useState('8');
 
-  const selectedDoc = doctors.find(d => d.id === selectedDocId) || doctors[0];
+  useEffect(() => {
+    if (isFuncionario && activeTab !== 'escala') {
+      setActiveTab('escala');
+    }
+  }, [isFuncionario, activeTab]);
 
-  // Calculate doctor-specific total revenue dynamically from transactions
+  useEffect(() => {
+    if (visibleDoctors.length > 0 && !visibleDoctors.some(d => d.id === selectedDocId)) {
+      setSelectedDocId(visibleDoctors[0].id);
+    }
+  }, [visibleDoctors, selectedDocId]);
+
+  const selectedDoc = visibleDoctors.find(d => d.id === selectedDocId) || visibleDoctors[0];
+
+  // Calculate doctor-specific total revenue dynamically from transactions (falls back to doc.currentEarnings for Dentista role)
   const getDocRevenueSum = (doc: Doctor) => {
-    return transactions
+    if (transactions.length === 0) {
+      return doc.currentEarnings || 0;
+    }
+    const txSum = transactions
       .filter(t => t.doctorName === doc.name && t.type === 'receita')
       .reduce((sum, t) => sum + t.value, 0);
+    return txSum > 0 ? txSum : doc.currentEarnings || 0;
   };
 
   const docTransactions = selectedDoc ? transactions.filter(t => t.doctorName === selectedDoc.name && t.type === 'receita') : [];
@@ -217,17 +252,19 @@ export default function Doctors({
       {/* Navigation Sub-Header Tabs */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-[#EBEBED]">
         <div className="flex items-center gap-1 bg-[#F4F4F6] p-1 rounded-xl w-full sm:w-auto overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
-              activeTab === 'overview'
-                ? 'bg-white text-[#18181B] shadow-xs'
-                : 'text-[#71717A] hover:text-[#18181B]'
-            }`}
-          >
-            <Users size={14} className={activeTab === 'overview' ? 'text-[#3795AE]' : ''} />
-            <span>Desempenho & Metas</span>
-          </button>
+          {!isFuncionario && (
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                activeTab === 'overview'
+                  ? 'bg-white text-[#18181B] shadow-xs'
+                  : 'text-[#71717A] hover:text-[#18181B]'
+              }`}
+            >
+              <Users size={14} className={activeTab === 'overview' ? 'text-[#3795AE]' : ''} />
+              <span>{isDentista ? 'Meu Desempenho' : 'Desempenho & Metas'}</span>
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('escala')}
             className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
@@ -242,15 +279,17 @@ export default function Doctors({
           </button>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="w-full sm:w-auto justify-center px-3.5 py-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <UserPlus size={15} />
-            <span>Cadastrar dentista</span>
-          </button>
-        </div>
+        {isGestao && (
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-full sm:w-auto justify-center px-3.5 py-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <UserPlus size={15} />
+              <span>Cadastrar dentista</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {activeTab === 'escala' ? (
@@ -258,11 +297,12 @@ export default function Doctors({
       ) : (
         <>
           {/* Clinician Selector Grid with "Escala" shortcut & "+ Cadastrar" card */}
+          {visibleDoctors.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {doctors.map((doc) => {
+            {visibleDoctors.map((doc) => {
               const isSelected = doc.id === selectedDocId;
               const currentSum = getDocRevenueSum(doc);
-              const percent = Math.round((currentSum / doc.monthlyTarget) * 100);
+              const percent = doc.monthlyTarget > 0 ? Math.round((currentSum / doc.monthlyTarget) * 100) : 0;
 
               return (
                 <button
@@ -314,20 +354,23 @@ export default function Doctors({
               </div>
             </button>
 
-            {/* Add Clinician Action Card */}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="p-4 rounded-2xl border border-dashed border-[#D4D4D8] hover:border-[#3795AE] bg-[#FAFAFA] hover:bg-white text-[#18181B] transition-all flex items-center justify-center gap-3 cursor-pointer min-h-[88px] group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0 group-hover:bg-[#3795AE]/15 transition-colors">
-                <UserPlus size={17} />
-              </div>
-              <div className="text-left">
-                <p className="text-[13px] font-semibold text-[#18181B]">Cadastrar dentista</p>
-                <p className="text-[11px] text-[#71717A] mt-0.5">Adicionar especialista e metas</p>
-              </div>
-            </button>
+            {/* Add Clinician Action Card (Gestão only) */}
+            {isGestao && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="p-4 rounded-2xl border border-dashed border-[#D4D4D8] hover:border-[#3795AE] bg-[#FAFAFA] hover:bg-white text-[#18181B] transition-all flex items-center justify-center gap-3 cursor-pointer min-h-[88px] group"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0 group-hover:bg-[#3795AE]/15 transition-colors">
+                  <UserPlus size={17} />
+                </div>
+                <div className="text-left">
+                  <p className="text-[13px] font-semibold text-[#18181B]">Cadastrar dentista</p>
+                  <p className="text-[11px] text-[#71717A] mt-0.5">Adicionar especialista e metas</p>
+                </div>
+              </button>
+            )}
           </div>
+          )}
 
       {/* Main Selected Clinician Dashboard */}
       {selectedDoc ? (
@@ -358,7 +401,7 @@ export default function Doctors({
             <div className="border-t border-level-1 pt-4 space-y-3">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-on-surface-variant font-semibold">Meta de Produção</span>
-                {!editingTarget ? (
+                {isGestao && !editingTarget ? (
                   <button 
                     onClick={() => { setTargetValue(selectedDoc.monthlyTarget.toString()); setEditingTarget(true); }}
                     className="text-xs text-primary font-bold hover:underline"
@@ -617,6 +660,25 @@ export default function Doctors({
         </div>
 
       </div>
+      ) : isDentista ? (
+        <div className="bg-white rounded-2xl border border-[#EBEBED] p-10 text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center">
+            <Stethoscope size={24} />
+          </div>
+          <div className="space-y-1.5 max-w-md">
+            <h3 className="font-display font-semibold text-base text-[#18181B]">Perfil clínico ainda não vinculado</h3>
+            <p className="text-xs text-[#71717A] leading-relaxed">
+              Solicite à <strong className="text-[#18181B] font-semibold">Gestão</strong> que vincule sua conta ao seu cadastro de dentista na aba <strong className="text-[#18181B] font-semibold">Acessos</strong> para visualizar suas metas e lançar atendimentos.
+            </p>
+          </div>
+          <button
+            onClick={() => setActiveTab('escala')}
+            className="bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer flex items-center gap-2"
+          >
+            <CalendarDays size={14} />
+            <span>Ver Escala dos Consultórios</span>
+          </button>
+        </div>
       ) : (
         <div className="bg-white rounded-card border border-level-2 p-12 text-center shadow-xs flex flex-col items-center justify-center space-y-4">
           <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
@@ -631,17 +693,20 @@ export default function Doctors({
               Cadastre sua primeira cirurgiã-dentista para poder definir metas, acompanhar faturamento, registrar atendimentos e monitorar o funil de avaliações e fechamentos.
             </p>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-primary hover:bg-primary/90 text-on-primary font-bold px-5 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-2"
-          >
-            <Plus size={14} />
-            <span>Cadastrar Primeira Dentista</span>
-          </button>
+          {isGestao && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-primary hover:bg-primary/90 text-on-primary font-bold px-5 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-2"
+            >
+              <Plus size={14} />
+              <span>Cadastrar Primeira Dentista</span>
+            </button>
+          )}
         </div>
       )}
 
-      {/* SECTION: CLINICAL CONVERSION DASHBOARD COMPARISON (Requirements H, I, J) */}
+      {/* SECTION: CLINICAL CONVERSION DASHBOARD COMPARISON (Gestão only) */}
+      {isGestao && (
       <div className="bg-white rounded-card border border-level-2 p-6 shadow-xs space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
@@ -820,6 +885,7 @@ export default function Doctors({
           </div>
         </div>
       </div>
+      )}
       </>
       )}
 

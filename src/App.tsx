@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Sidebar, { ClinicLogo } from './components/Sidebar';
+import Sidebar, { ClinicLogo, canAccessTab } from './components/Sidebar';
+import AuthScreen from './components/AuthScreen';
 import Overview from './components/Overview';
 import Doctors from './components/Doctors';
 import GoalsTeam from './components/GoalsTeam';
@@ -14,6 +15,7 @@ import Sanitizacao from './components/Sanitizacao';
 import Laboratorio from './components/Laboratorio';
 import Utilities from './components/Utilities';
 import Financial from './components/Financial';
+import AccessManagement from './components/AccessManagement';
 
 import {
   INITIAL_DOCTORS,
@@ -23,33 +25,107 @@ import {
   INITIAL_TEAM_MEMBERS
 } from './data';
 import { Transaction, Doctor, SupplyItem, TeamGoal, TeamMember } from './types';
-import { Calendar, Bell, Lock, Menu, Plus, ArrowRight } from 'lucide-react';
+import { Calendar, Bell, Lock, Menu, Plus, ArrowRight, Loader2, Ban, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  isFirebaseConfigured,
-  loadCollectionFromFirestore,
-  saveToFirestore,
-  saveCollectionToFirestore
+  auth,
+  onAuthStateChanged,
+  signOutUser,
+  getUserProfile,
+  ensureUserWorkspaceSync,
+  loadClinicCollection,
+  createClinicDoc,
+  updateClinicDoc,
+  updateDoctorProgressAsDentista,
+  deleteClinicDoc,
+  upsertClinicMonthlyGoal,
+  seedInitialClinicData,
+  clearAndSeedClinicData,
+  DEFAULT_CLINIC_ID,
+  ROLE_LABELS,
+  User,
+  UserProfile,
+  UserRole
 } from './lib/firebase';
 
-// Minimalist Acesso Restrito View for Restricted Tabs (Funcionários)
-function AccessDenied({ tabName }: { tabName: string }) {
+function getDefaultTabForRole(role: UserRole): string {
+  if (role === 'gestao') return 'visao-geral';
+  if (role === 'dentista') return 'doutora';
+  return 'compras';
+}
+
+// Minimalist Acesso Restrito View for Restricted Tabs
+function AccessDenied({
+  tabName,
+  requiredLabel = 'Gestão',
+  currentRole,
+  onGoHome
+}: {
+  tabName: string;
+  requiredLabel?: string;
+  currentRole: UserRole;
+  onGoHome: () => void;
+}) {
   return (
-    <div className="max-w-md mx-auto w-full py-20 text-center select-none font-sans">
-      <div className="bg-white border border-[#EBEBED] p-8 rounded-2xl space-y-5">
+    <div className="max-w-md mx-auto w-full py-16 text-center select-none font-sans">
+      <div className="bg-white border border-[#EBEBED] p-7 sm:p-8 rounded-2xl space-y-5">
         <div className="w-12 h-12 rounded-xl bg-[#FEF3C7] text-[#D97706] flex items-center justify-center mx-auto">
           <Lock size={22} />
         </div>
         <div className="space-y-2">
           <h3 className="font-display font-semibold text-lg text-[#18181B]">Acesso restrito</h3>
           <p className="text-sm text-[#52525B] leading-relaxed">
-            A seção <strong className="text-[#18181B] font-semibold">{tabName}</strong> é exclusiva para o perfil de{' '}
-            <strong className="text-[#3795AE] font-semibold">Gerência</strong>.
+            A seção <strong className="text-[#18181B] font-semibold">{tabName}</strong> é exclusiva para o perfil{' '}
+            <strong className="text-[#3795AE] font-semibold">{requiredLabel}</strong>.
           </p>
           <p className="text-xs text-[#71717A] leading-relaxed">
-            Entre com o perfil de gerência ou solicite autorização para visualizar os indicadores financeiros completos.
+            Seu perfil atual é <strong className="text-[#3F3F46] font-medium">{ROLE_LABELS[currentRole]}</strong>. Caso precise desse acesso, solicite à Gestão da clínica.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={onGoHome}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold transition-colors cursor-pointer"
+        >
+          <span>Ir para minha área inicial</span>
+          <ArrowRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Minimalist Inactive Account Screen
+function InactiveAccountScreen({
+  displayName,
+  email,
+  onLogout
+}: {
+  displayName: string;
+  email?: string | null;
+  onLogout: () => void;
+}) {
+  return (
+    <div className="min-h-[100dvh] w-full bg-[#FAFAFA] flex flex-col items-center justify-center px-4 py-6 select-none font-sans">
+      <div className="bg-white border border-[#EBEBED] p-7 sm:p-8 rounded-2xl max-w-[400px] w-full text-center space-y-5">
+        <div className="w-12 h-12 rounded-xl bg-[#FEF2F2] text-[#DC2626] flex items-center justify-center mx-auto">
+          <Ban size={22} />
+        </div>
+        <div className="space-y-2">
+          <h2 className="font-display font-semibold text-lg text-[#18181B]">Acesso desativado</h2>
+          <p className="text-sm text-[#52525B] leading-relaxed">
+            Olá, <strong className="text-[#18181B] font-semibold">{displayName}</strong>. Sua conta está temporariamente desativada pela <strong className="text-[#3795AE] font-semibold">Gestão</strong>.
+          </p>
+          {email && <p className="text-xs text-[#71717A]">{email}</p>}
+        </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-[#FEF2F2] border border-[#E4E4E7] hover:border-[#FECACA] text-[#52525B] hover:text-[#DC2626] text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+        >
+          <LogOut size={14} />
+          <span>Sair e trocar de conta</span>
+        </button>
       </div>
     </div>
   );
@@ -61,23 +137,19 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [quickAddTrigger, setQuickAddTrigger] = useState(0);
 
-  // Persisted user session role: 'gerente' | 'funcionario' | null
-  const [userRole, setUserRole] = useState<'gerente' | 'funcionario' | null>(() => {
-    return localStorage.getItem('clinica_user_role') as 'gerente' | 'funcionario' | null;
-  });
+  // Firebase Auth & Profile state
+  const [authLoading, setAuthLoading] = useState(true);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  // Login form states
-  const [selectedLoginRole, setSelectedLoginRole] = useState<'gerente' | 'funcionario'>('gerente');
-  const [password, setPassword] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  // Core stateful database persisted in localStorage / Firebase
+  // Core stateful database synchronized with shared clinic Firestore collections
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [supplies, setSupplies] = useState<SupplyItem[]>([]);
   const [goals, setGoals] = useState<TeamGoal[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [monthlyGoal, setMonthlyGoal] = useState(50000);
+  const [monthlyGoal, setMonthlyGoalState] = useState(50000);
 
   // Dynamic live date
   const [currentLiveDate, setCurrentLiveDate] = useState('');
@@ -100,7 +172,143 @@ export default function App() {
     setShortLiveDate(shortFmt);
   }, []);
 
-  // Notifications State & Engine
+  // Listen to Firebase Auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async user => {
+      if (!user) {
+        setFirebaseUser(null);
+        setUserProfile(null);
+        setTransactions([]);
+        setDoctors([]);
+        setSupplies([]);
+        setGoals([]);
+        setTeamMembers([]);
+        setAuthLoading(false);
+        return;
+      }
+
+      setFirebaseUser(user);
+      setAuthLoading(true);
+      try {
+        const existingProfile = await getUserProfile(user.uid);
+        if (existingProfile) {
+          const synced = await ensureUserWorkspaceSync(user, existingProfile);
+          setUserProfile(synced);
+          setActiveTab(prev =>
+            canAccessTab(synced.role, prev) ? prev : getDefaultTabForRole(synced.role)
+          );
+        } else {
+          setUserProfile(null);
+        }
+      } catch (err) {
+        console.error('[Firebase] Erro ao carregar perfil do usuário:', err);
+        setUserProfile(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const uid = firebaseUser?.uid || null;
+  const clinicId = userProfile?.clinicId || DEFAULT_CLINIC_ID;
+  const userRole: UserRole = userProfile?.role || 'funcionario';
+
+  // Role-gated clinic data hydration (strictly queries only collections allowed by Firestore Rules)
+  useEffect(() => {
+    if (!firebaseUser || !userProfile || !userProfile.active) return;
+
+    let cancelled = false;
+    const activeUid = firebaseUser.uid;
+    const activeClinicId = userProfile.clinicId || DEFAULT_CLINIC_ID;
+    const role = userProfile.role;
+
+    async function hydrateClinicData() {
+      setDataLoading(true);
+      try {
+        if (role === 'gestao') {
+          const [fbTransactions, fbDoctors, fbSupplies, fbGoals, fbTeam, fbConfig] =
+            await Promise.all([
+              loadClinicCollection<Transaction>(activeClinicId, 'transactions'),
+              loadClinicCollection<Doctor>(activeClinicId, 'doctors'),
+              loadClinicCollection<SupplyItem>(activeClinicId, 'supplies'),
+              loadClinicCollection<TeamGoal>(activeClinicId, 'goals'),
+              loadClinicCollection<TeamMember>(activeClinicId, 'teamMembers'),
+              loadClinicCollection<{ id: string; val: number }>(activeClinicId, 'config')
+            ]);
+
+          if (cancelled) return;
+
+          const hasExistingWorkspace =
+            fbTransactions.length > 0 ||
+            fbDoctors.length > 0 ||
+            fbSupplies.length > 0 ||
+            fbConfig.length > 0;
+
+          if (!hasExistingWorkspace) {
+            await seedInitialClinicData(activeClinicId, activeUid, {
+              transactions: INITIAL_TRANSACTIONS,
+              doctors: INITIAL_DOCTORS,
+              supplies: INITIAL_SUPPLY_ITEMS,
+              goals: INITIAL_TEAM_GOALS,
+              teamMembers: INITIAL_TEAM_MEMBERS,
+              monthlyGoal: 50000
+            });
+            if (cancelled) return;
+            setTransactions(INITIAL_TRANSACTIONS);
+            setDoctors(INITIAL_DOCTORS);
+            setSupplies(INITIAL_SUPPLY_ITEMS);
+            setGoals(INITIAL_TEAM_GOALS);
+            setTeamMembers(INITIAL_TEAM_MEMBERS);
+            setMonthlyGoalState(50000);
+          } else {
+            setTransactions(
+              [...fbTransactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+            );
+            setDoctors(fbDoctors);
+            setSupplies(fbSupplies);
+            setGoals(fbGoals);
+            setTeamMembers(fbTeam);
+            const goalDoc = fbConfig.find(c => c.id === 'monthly_goal');
+            setMonthlyGoalState(goalDoc ? goalDoc.val : 50000);
+          }
+        } else if (role === 'dentista') {
+          const fbDoctors = await loadClinicCollection<Doctor>(activeClinicId, 'doctors');
+          if (cancelled) return;
+          setDoctors(fbDoctors);
+          setTransactions([]);
+          setSupplies([]);
+          setGoals([]);
+          setTeamMembers([]);
+        } else {
+          // funcionario
+          const [fbDoctors, fbSupplies] = await Promise.all([
+            loadClinicCollection<Doctor>(activeClinicId, 'doctors'),
+            loadClinicCollection<SupplyItem>(activeClinicId, 'supplies')
+          ]);
+          if (cancelled) return;
+          setDoctors(fbDoctors);
+          setSupplies(fbSupplies);
+          setTransactions([]);
+          setGoals([]);
+          setTeamMembers([]);
+        }
+      } catch (err) {
+        console.error('[Firebase] Erro ao carregar dados da clínica:', err);
+      } finally {
+        if (!cancelled) setDataLoading(false);
+      }
+    }
+
+    hydrateClinicData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [firebaseUser, userProfile]);
+
+  // Notifications State & Engine (filtered to sections the user's role can access)
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationList, setNotificationList] = useState<
     { id: string; type: 'sanitizacao' | 'compras' | 'laboratorio'; title: string; desc: string; severity: 'low' | 'medium' | 'high' }[]
@@ -111,82 +319,88 @@ export default function App() {
     const todayStr = new Date().toISOString().split('T')[0];
 
     // 1. Sanitizações Pendentes
-    try {
-      const savedLogs = localStorage.getItem('clinica_sanitizacao_logs');
-      const logs = savedLogs ? JSON.parse(savedLogs) : [];
-      const signedToday = logs.some((l: any) => l.data === todayStr);
-      if (!signedToday) {
-        list.push({
-          id: 'notif-san-1',
-          type: 'sanitizacao',
-          title: 'Sanitização pendente',
-          desc: 'A assinatura da auditoria sanitária diária ainda não foi realizada hoje.',
-          severity: 'high'
-        });
+    if (canAccessTab(userRole, 'sanitizacao')) {
+      try {
+        const savedLogs = localStorage.getItem('clinica_sanitizacao_logs');
+        const logs = savedLogs ? JSON.parse(savedLogs) : [];
+        const signedToday = logs.some((l: any) => l.data === todayStr);
+        if (!signedToday) {
+          list.push({
+            id: 'notif-san-1',
+            type: 'sanitizacao',
+            title: 'Sanitização pendente',
+            desc: 'A assinatura da auditoria sanitária diária ainda não foi realizada hoje.',
+            severity: 'high'
+          });
+        }
+      } catch (e) {
+        console.error(e);
       }
-    } catch (e) {
-      console.error(e);
     }
 
     // 2. Compras Pendentes (Estoque baixo e Validades)
-    supplies.forEach(sup => {
-      if (sup.stock <= sup.minStock) {
-        list.push({
-          id: `notif-sup-${sup.id}`,
-          type: 'compras',
-          title: `Estoque crítico: ${sup.name}`,
-          desc: `${sup.name} está com ${sup.stock} ${sup.unit} (mínimo: ${sup.minStock} ${sup.unit}).`,
-          severity: 'medium'
-        });
-      }
-
-      if (sup.expirationDate) {
-        const expDate = new Date(sup.expirationDate + 'T23:59:59');
-        const now = new Date();
-        const diffDays = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
-        if (diffDays < 0) {
+    if (canAccessTab(userRole, 'compras')) {
+      supplies.forEach(sup => {
+        if (sup.stock <= sup.minStock) {
           list.push({
-            id: `notif-exp-${sup.id}`,
+            id: `notif-sup-${sup.id}`,
             type: 'compras',
-            title: `Produto vencido: ${sup.name}`,
-            desc: `Venceu em ${sup.expirationDate.split('-').reverse().join('/')}. Verifique no estoque.`,
-            severity: 'high'
-          });
-        } else if (diffDays <= 30) {
-          list.push({
-            id: `notif-exp-soon-${sup.id}`,
-            type: 'compras',
-            title: `Validade próxima: ${sup.name}`,
-            desc: `Vence em ${diffDays} dias (${sup.expirationDate.split('-').reverse().join('/')}).`,
+            title: `Estoque crítico: ${sup.name}`,
+            desc: `${sup.name} está com ${sup.stock} ${sup.unit} (mínimo: ${sup.minStock} ${sup.unit}).`,
             severity: 'medium'
           });
         }
-      }
-    });
 
-    // 3. Procedimentos Atrasados
-    try {
-      const savedProcs = localStorage.getItem('clinica_lab_procedures');
-      const procs = savedProcs ? JSON.parse(savedProcs) : [];
-      procs.forEach((p: any) => {
-        const isDelayed = p.expectedReturnDate < todayStr && !['Recebido', 'Instalado'].includes(p.status);
-        if (isDelayed) {
-          const dateBR = p.expectedReturnDate.split('-').reverse().join('/');
-          list.push({
-            id: `notif-lab-${p.id}`,
-            type: 'laboratorio',
-            title: `Trabalho atrasado: ${p.patientName}`,
-            desc: `${p.procedureType} previsto para ${dateBR} (${p.laboratoryName}).`,
-            severity: 'high'
-          });
+        if (sup.expirationDate) {
+          const expDate = new Date(sup.expirationDate + 'T23:59:59');
+          const now = new Date();
+          const diffDays = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 3600 * 24));
+          if (diffDays < 0) {
+            list.push({
+              id: `notif-exp-${sup.id}`,
+              type: 'compras',
+              title: `Produto vencido: ${sup.name}`,
+              desc: `Venceu em ${sup.expirationDate.split('-').reverse().join('/')}. Verifique no estoque.`,
+              severity: 'high'
+            });
+          } else if (diffDays <= 30) {
+            list.push({
+              id: `notif-exp-soon-${sup.id}`,
+              type: 'compras',
+              title: `Validade próxima: ${sup.name}`,
+              desc: `Vence em ${diffDays} dias (${sup.expirationDate.split('-').reverse().join('/')}).`,
+              severity: 'medium'
+            });
+          }
         }
       });
-    } catch (e) {
-      console.error(e);
+    }
+
+    // 3. Procedimentos Atrasados
+    if (canAccessTab(userRole, 'laboratorio')) {
+      try {
+        const savedProcs = localStorage.getItem('clinica_lab_procedures');
+        const procs = savedProcs ? JSON.parse(savedProcs) : [];
+        procs.forEach((p: any) => {
+          const isDelayed = p.expectedReturnDate < todayStr && !['Recebido', 'Instalado'].includes(p.status);
+          if (isDelayed) {
+            const dateBR = p.expectedReturnDate.split('-').reverse().join('/');
+            list.push({
+              id: `notif-lab-${p.id}`,
+              type: 'laboratorio',
+              title: `Trabalho atrasado: ${p.patientName}`,
+              desc: `${p.procedureType} previsto para ${dateBR} (${p.laboratoryName}).`,
+              severity: 'high'
+            });
+          }
+        });
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     setNotificationList(list);
-  }, [supplies, activeTab]);
+  }, [supplies, activeTab, userRole]);
 
   const alertCounts = useMemo(
     () => ({
@@ -197,170 +411,25 @@ export default function App() {
     [notificationList]
   );
 
-  // Initialize data from Firebase (if configured) or fallback to localStorage
-  useEffect(() => {
-    async function loadData() {
-      if (isFirebaseConfigured) {
-        try {
-          const fbTransactions = await loadCollectionFromFirestore<Transaction>('transactions');
-          const fbDoctors = await loadCollectionFromFirestore<Doctor>('doctors');
-          const fbSupplies = await loadCollectionFromFirestore<SupplyItem>('supplies');
-          const fbGoals = await loadCollectionFromFirestore<TeamGoal>('goals');
-          const fbTeam = await loadCollectionFromFirestore<TeamMember>('teamMembers');
-          const fbConfig = await loadCollectionFromFirestore<{ id: string; val: number }>('config');
-
-          if (fbTransactions && fbTransactions.length > 0) {
-            setTransactions(fbTransactions);
-          } else {
-            setTransactions(INITIAL_TRANSACTIONS);
-            await saveCollectionToFirestore('transactions', INITIAL_TRANSACTIONS);
-          }
-
-          if (fbDoctors && fbDoctors.length > 0) {
-            setDoctors(fbDoctors);
-          } else {
-            setDoctors(INITIAL_DOCTORS);
-            await saveCollectionToFirestore('doctors', INITIAL_DOCTORS);
-          }
-
-          if (fbSupplies && fbSupplies.length > 0) {
-            setSupplies(fbSupplies);
-          } else {
-            setSupplies(INITIAL_SUPPLY_ITEMS);
-            await saveCollectionToFirestore('supplies', INITIAL_SUPPLY_ITEMS);
-          }
-
-          if (fbGoals && fbGoals.length > 0) {
-            setGoals(fbGoals);
-          } else {
-            setGoals(INITIAL_TEAM_GOALS);
-            await saveCollectionToFirestore('goals', INITIAL_TEAM_GOALS);
-          }
-
-          if (fbTeam && fbTeam.length > 0) {
-            setTeamMembers(fbTeam);
-          } else {
-            setTeamMembers(INITIAL_TEAM_MEMBERS);
-            await saveCollectionToFirestore('teamMembers', INITIAL_TEAM_MEMBERS);
-          }
-
-          const monthlyGoalDoc = fbConfig?.find(c => c.id === 'monthly_goal');
-          if (monthlyGoalDoc) {
-            setMonthlyGoal(monthlyGoalDoc.val);
-          } else {
-            setMonthlyGoal(50000);
-            await saveToFirestore('config', 'monthly_goal', { val: 50000 });
-          }
-          return;
-        } catch (error) {
-          console.error('[Firebase] Falha na sincronização, usando LocalStorage como fallback:', error);
-        }
-      }
-
-      const savedTransactions = localStorage.getItem('clinica_transactions');
-      const savedDoctors = localStorage.getItem('clinica_doctors');
-      const savedSupplies = localStorage.getItem('clinica_supplies');
-      const savedGoals = localStorage.getItem('clinica_goals');
-      const savedTeam = localStorage.getItem('clinica_team');
-      const savedGoalVal = localStorage.getItem('clinica_monthly_goal');
-
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-      else setTransactions(INITIAL_TRANSACTIONS);
-
-      if (savedDoctors) setDoctors(JSON.parse(savedDoctors));
-      else setDoctors(INITIAL_DOCTORS);
-
-      if (savedSupplies) setSupplies(JSON.parse(savedSupplies));
-      else setSupplies(INITIAL_SUPPLY_ITEMS);
-
-      if (savedGoals) setGoals(JSON.parse(savedGoals));
-      else setGoals(INITIAL_TEAM_GOALS);
-
-      if (savedTeam) setTeamMembers(JSON.parse(savedTeam));
-      else setTeamMembers(INITIAL_TEAM_MEMBERS);
-
-      if (savedGoalVal) setMonthlyGoal(parseInt(savedGoalVal));
-      else setMonthlyGoal(50000);
-    }
-
-    loadData();
-  }, []);
-
-  // Save states to localStorage and Firebase upon changes
-  useEffect(() => {
-    if (transactions.length > 0) {
-      localStorage.setItem('clinica_transactions', JSON.stringify(transactions));
-      if (isFirebaseConfigured) saveCollectionToFirestore('transactions', transactions);
-    }
-  }, [transactions]);
-
-  useEffect(() => {
-    if (doctors.length > 0) {
-      localStorage.setItem('clinica_doctors', JSON.stringify(doctors));
-      if (isFirebaseConfigured) saveCollectionToFirestore('doctors', doctors);
-    }
-  }, [doctors]);
-
-  useEffect(() => {
-    if (supplies.length > 0) {
-      localStorage.setItem('clinica_supplies', JSON.stringify(supplies));
-      if (isFirebaseConfigured) saveCollectionToFirestore('supplies', supplies);
-    }
-  }, [supplies]);
-
-  useEffect(() => {
-    if (goals.length > 0) {
-      localStorage.setItem('clinica_goals', JSON.stringify(goals));
-      if (isFirebaseConfigured) saveCollectionToFirestore('goals', goals);
-    }
-  }, [goals]);
-
-  useEffect(() => {
-    if (teamMembers.length > 0) {
-      localStorage.setItem('clinica_team', JSON.stringify(teamMembers));
-      if (isFirebaseConfigured) saveCollectionToFirestore('teamMembers', teamMembers);
-    }
-  }, [teamMembers]);
-
-  useEffect(() => {
-    localStorage.setItem('clinica_monthly_goal', monthlyGoal.toString());
-    if (isFirebaseConfigured) saveToFirestore('config', 'monthly_goal', { val: monthlyGoal });
-  }, [monthlyGoal]);
-
-  // Handle credentials check
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-
-    if (selectedLoginRole === 'gerente') {
-      if (password === 'gerente123') {
-        setUserRole('gerente');
-        localStorage.setItem('clinica_user_role', 'gerente');
-        setPassword('');
-      } else {
-        setErrorMsg('Senha incorreta para nível de Gerência.');
-      }
-    } else {
-      if (password === 'funcionario123') {
-        setUserRole('funcionario');
-        localStorage.setItem('clinica_user_role', 'funcionario');
-        setPassword('');
-        if (!['visao-geral', 'compras'].includes(activeTab)) {
-          setActiveTab('visao-geral');
-        }
-      } else {
-        setErrorMsg('Senha incorreta para nível de Funcionário.');
-      }
+  const handleLogout = async () => {
+    try {
+      await signOutUser();
+      setActiveTab('visao-geral');
+    } catch (err) {
+      console.error('[Firebase] Erro ao sair:', err);
     }
   };
 
-  const handleLogout = () => {
-    setUserRole(null);
-    localStorage.removeItem('clinica_user_role');
+  const setMonthlyGoal = (val: number) => {
+    if (userRole !== 'gestao') return;
+    setMonthlyGoalState(val);
+    if (uid) {
+      upsertClinicMonthlyGoal(clinicId, uid, val).catch(console.error);
+    }
   };
 
   const handleAddTransaction = (newT: Omit<Transaction, 'id' | 'date'> & { date?: string }) => {
-    const id = 't-' + Math.random().toString(36).substr(2, 9);
+    const id = 't-' + Math.random().toString(36).slice(2, 11);
     const date = newT.date || new Date().toISOString().split('T')[0];
 
     const transaction: Transaction = {
@@ -370,41 +439,69 @@ export default function App() {
     };
 
     setTransactions(prev => [transaction, ...prev]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'transactions', id, transaction).catch(console.error);
+    }
 
     if (transaction.type === 'receita') {
       setDoctors(prev =>
-        prev.map(doc =>
-          doc.name === transaction.doctorName
-            ? { ...doc, currentEarnings: doc.currentEarnings + transaction.value }
-            : doc
-        )
+        prev.map(doc => {
+          if (doc.name === transaction.doctorName) {
+            const updated = { ...doc, currentEarnings: doc.currentEarnings + transaction.value };
+            if (uid) {
+              if (userRole === 'gestao') {
+                updateClinicDoc(clinicId, uid, 'doctors', doc.id, updated).catch(console.error);
+              } else if (userRole === 'dentista' && userProfile?.linkedDoctorId === doc.id) {
+                updateDoctorProgressAsDentista(clinicId, doc.id, {
+                  currentEarnings: updated.currentEarnings
+                }).catch(console.error);
+              }
+            }
+            return updated;
+          }
+          return doc;
+        })
       );
 
-      setGoals(prev =>
-        prev.map(goal =>
-          goal.title.includes('faturamento') ||
-          goal.assignedTo === 'Toda a Equipe' ||
-          goal.assignedTo === transaction.doctorName
-            ? { ...goal, currentValue: goal.currentValue + transaction.value }
-            : goal
-        )
-      );
+      if (userRole === 'gestao') {
+        setGoals(prev =>
+          prev.map(goal => {
+            if (
+              goal.title.includes('faturamento') ||
+              goal.assignedTo === 'Toda a Equipe' ||
+              goal.assignedTo === transaction.doctorName
+            ) {
+              const updated = { ...goal, currentValue: goal.currentValue + transaction.value };
+              if (uid) updateClinicDoc(clinicId, uid, 'goals', goal.id, updated).catch(console.error);
+              return updated;
+            }
+            return goal;
+          })
+        );
+      }
     }
   };
 
   const handleDeleteTransaction = (id: string) => {
+    if (userRole !== 'gestao') return;
     const target = transactions.find(t => t.id === id);
     if (!target) return;
 
     setTransactions(prev => prev.filter(t => t.id !== id));
+    if (uid) {
+      deleteClinicDoc(clinicId, 'transactions', id).catch(console.error);
+    }
 
     if (target.type === 'receita') {
       setDoctors(prev =>
-        prev.map(doc =>
-          doc.name === target.doctorName
-            ? { ...doc, currentEarnings: Math.max(doc.currentEarnings - target.value, 0) }
-            : doc
-        )
+        prev.map(doc => {
+          if (doc.name === target.doctorName) {
+            const updated = { ...doc, currentEarnings: Math.max(doc.currentEarnings - target.value, 0) };
+            if (uid) updateClinicDoc(clinicId, uid, 'doctors', doc.id, updated).catch(console.error);
+            return updated;
+          }
+          return doc;
+        })
       );
     }
 
@@ -416,7 +513,9 @@ export default function App() {
             goal.assignedTo === 'Toda a Equipe' ||
             goal.assignedTo === target.doctorName
           ) {
-            return { ...goal, currentValue: Math.max(goal.currentValue - target.value, 0) };
+            const updated = { ...goal, currentValue: Math.max(goal.currentValue - target.value, 0) };
+            if (uid) updateClinicDoc(clinicId, uid, 'goals', goal.id, updated).catch(console.error);
+            return updated;
           }
         } else if (target.type === 'despesa' && target.category === 'Materiais') {
           if (
@@ -424,7 +523,9 @@ export default function App() {
             goal.title.includes('Materiais') ||
             goal.title.includes('gasto')
           ) {
-            return { ...goal, currentValue: Math.max(goal.currentValue - target.value, 0) };
+            const updated = { ...goal, currentValue: Math.max(goal.currentValue - target.value, 0) };
+            if (uid) updateClinicDoc(clinicId, uid, 'goals', goal.id, updated).catch(console.error);
+            return updated;
           }
         }
         return goal;
@@ -433,25 +534,59 @@ export default function App() {
   };
 
   const handleUpdateDoctorTarget = (id: string, newTarget: number) => {
-    setDoctors(prev => prev.map(doc => (doc.id === id ? { ...doc, monthlyTarget: newTarget } : doc)));
+    if (userRole !== 'gestao') return;
+    setDoctors(prev =>
+      prev.map(doc => {
+        if (doc.id === id) {
+          const updated = { ...doc, monthlyTarget: newTarget };
+          if (uid) updateClinicDoc(clinicId, uid, 'doctors', id, updated).catch(console.error);
+          return updated;
+        }
+        return doc;
+      })
+    );
   };
 
   const handleAddSupplyItem = (newItem: Omit<SupplyItem, 'id'>) => {
-    const id = 'sup-' + Math.random().toString(36).substr(2, 9);
-    setSupplies(prev => [...prev, { id, ...newItem }]);
+    if (userRole === 'dentista') return;
+    const id = 'sup-' + Math.random().toString(36).slice(2, 11);
+    const created: SupplyItem = { id, ...newItem };
+    setSupplies(prev => [...prev, created]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'supplies', id, created).catch(console.error);
+    }
   };
 
   const handleUpdateSupplyItem = (id: string, updatedFields: Partial<SupplyItem>) => {
-    setSupplies(prev => prev.map(item => (item.id === id ? { ...item, ...updatedFields } : item)));
+    if (userRole === 'dentista') return;
+    setSupplies(prev =>
+      prev.map(item => {
+        if (item.id === id) {
+          const updated = { ...item, ...updatedFields };
+          if (uid) updateClinicDoc(clinicId, uid, 'supplies', id, updated).catch(console.error);
+          return updated;
+        }
+        return item;
+      })
+    );
   };
 
   const handleDeleteSupplyItem = (id: string) => {
+    if (userRole === 'dentista') return;
     setSupplies(prev => prev.filter(item => item.id !== id));
+    if (uid) {
+      deleteClinicDoc(clinicId, 'supplies', id).catch(console.error);
+    }
   };
 
   const handleAddDoctor = (newDoc: Omit<Doctor, 'id'>) => {
-    const id = 'doc-' + Math.random().toString(36).substr(2, 9);
-    setDoctors(prev => [...prev, { id, ...newDoc }]);
+    if (userRole !== 'gestao') return;
+    const id = 'doc-' + Math.random().toString(36).slice(2, 11);
+    const created: Doctor = { id, ...newDoc };
+    setDoctors(prev => [...prev, created]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'doctors', id, created).catch(console.error);
+    }
   };
 
   const handleUpdateDoctorStats = (
@@ -459,16 +594,43 @@ export default function App() {
     stats: { evaluations: number; closures: number; monthlyTarget: number }
   ) => {
     setDoctors(prev =>
-      prev.map(d =>
-        d.id === id
-          ? { ...d, evaluations: stats.evaluations, closures: stats.closures, monthlyTarget: stats.monthlyTarget }
-          : d
-      )
+      prev.map(d => {
+        if (d.id === id) {
+          const updated = {
+            ...d,
+            evaluations: stats.evaluations,
+            closures: stats.closures,
+            monthlyTarget: userRole === 'gestao' ? stats.monthlyTarget : d.monthlyTarget
+          };
+          if (uid) {
+            if (userRole === 'gestao') {
+              updateClinicDoc(clinicId, uid, 'doctors', id, updated).catch(console.error);
+            } else if (userRole === 'dentista' && userProfile?.linkedDoctorId === id) {
+              updateDoctorProgressAsDentista(clinicId, id, {
+                evaluations: stats.evaluations,
+                closures: stats.closures
+              }).catch(console.error);
+            }
+          }
+          return updated;
+        }
+        return d;
+      })
     );
   };
 
   const handleAddStock = (id: string, qty: number) => {
-    setSupplies(prev => prev.map(sup => (sup.id === id ? { ...sup, stock: sup.stock + qty } : sup)));
+    if (userRole === 'dentista') return;
+    setSupplies(prev =>
+      prev.map(sup => {
+        if (sup.id === id) {
+          const updated = { ...sup, stock: sup.stock + qty };
+          if (uid) updateClinicDoc(clinicId, uid, 'supplies', id, updated).catch(console.error);
+          return updated;
+        }
+        return sup;
+      })
+    );
   };
 
   const handleRecordPurchaseExpense = (
@@ -478,7 +640,8 @@ export default function App() {
     supplier?: string,
     subcategory?: string
   ) => {
-    const id = 't-exp-' + Math.random().toString(36).substr(2, 9);
+    if (userRole === 'dentista') return;
+    const id = 't-exp-' + Math.random().toString(36).slice(2, 11);
     const date = customDate || new Date().toISOString().split('T')[0];
 
     const transaction: Transaction = {
@@ -494,50 +657,83 @@ export default function App() {
     };
 
     setTransactions(prev => [transaction, ...prev]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'transactions', id, transaction).catch(console.error);
+    }
 
-    setGoals(prev =>
-      prev.map(goal =>
-        goal.assignedTo === 'Equipe de Compras' ||
-        goal.title.includes('Materiais') ||
-        goal.title.includes('gasto')
-          ? { ...goal, currentValue: goal.currentValue + value }
-          : goal
-      )
-    );
+    if (userRole === 'gestao') {
+      setGoals(prev =>
+        prev.map(goal => {
+          if (
+            goal.assignedTo === 'Equipe de Compras' ||
+            goal.title.includes('Materiais') ||
+            goal.title.includes('gasto')
+          ) {
+            const updated = { ...goal, currentValue: goal.currentValue + value };
+            if (uid) updateClinicDoc(clinicId, uid, 'goals', goal.id, updated).catch(console.error);
+            return updated;
+          }
+          return goal;
+        })
+      );
+    }
   };
 
   const handleUpdateGoalProgress = (id: string, progressDelta: number) => {
+    if (userRole !== 'gestao') return;
     setGoals(prev =>
-      prev.map(goal => (goal.id === id ? { ...goal, currentValue: goal.currentValue + progressDelta } : goal))
+      prev.map(goal => {
+        if (goal.id === id) {
+          const updated = { ...goal, currentValue: goal.currentValue + progressDelta };
+          if (uid) updateClinicDoc(clinicId, uid, 'goals', id, updated).catch(console.error);
+          return updated;
+        }
+        return goal;
+      })
     );
   };
 
   const handleToggleStatus = (id: string, status: 'Ativo' | 'Em plantão' | 'Ausente') => {
-    setTeamMembers(prev => prev.map(member => (member.id === id ? { ...member, status } : member)));
+    if (userRole !== 'gestao') return;
+    setTeamMembers(prev =>
+      prev.map(member => {
+        if (member.id === id) {
+          const updated = { ...member, status };
+          if (uid) updateClinicDoc(clinicId, uid, 'teamMembers', id, updated).catch(console.error);
+          return updated;
+        }
+        return member;
+      })
+    );
   };
 
   const handleAddGoal = (newGoal: Omit<TeamGoal, 'id'>) => {
-    const id = 'g-' + Math.random().toString(36).substr(2, 9);
-    setGoals(prev => [...prev, { id, ...newGoal }]);
+    if (userRole !== 'gestao') return;
+    const id = 'g-' + Math.random().toString(36).slice(2, 11);
+    const created: TeamGoal = { id, ...newGoal };
+    setGoals(prev => [...prev, created]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'goals', id, created).catch(console.error);
+    }
   };
 
   const handleAddMember = (newMember: Omit<TeamMember, 'id'>) => {
-    const id = 'tm-' + Math.random().toString(36).substr(2, 9);
-    setTeamMembers(prev => [...prev, { id, ...newMember }]);
+    if (userRole !== 'gestao') return;
+    const id = 'tm-' + Math.random().toString(36).slice(2, 11);
+    const created: TeamMember = { id, ...newMember };
+    setTeamMembers(prev => [...prev, created]);
+    if (uid) {
+      createClinicDoc(clinicId, uid, 'teamMembers', id, created).catch(console.error);
+    }
   };
 
-  const handleResetData = () => {
+  const handleResetData = async () => {
+    if (userRole !== 'gestao') return;
     if (
       window.confirm(
         'Deseja mesmo redefinir todos os faturamentos e estoques para os valores iniciais do sistema?'
       )
     ) {
-      localStorage.removeItem('clinica_transactions');
-      localStorage.removeItem('clinica_doctors');
-      localStorage.removeItem('clinica_supplies');
-      localStorage.removeItem('clinica_goals');
-      localStorage.removeItem('clinica_team');
-      localStorage.removeItem('clinica_monthly_goal');
       localStorage.removeItem('clinica_gamification_v3');
 
       setTransactions(INITIAL_TRANSACTIONS);
@@ -545,17 +741,43 @@ export default function App() {
       setSupplies(INITIAL_SUPPLY_ITEMS);
       setGoals(INITIAL_TEAM_GOALS);
       setTeamMembers(INITIAL_TEAM_MEMBERS);
-      setMonthlyGoal(50000);
+      setMonthlyGoalState(50000);
       setActiveTab('visao-geral');
+
+      if (uid) {
+        try {
+          await clearAndSeedClinicData(clinicId, uid, {
+            transactions: INITIAL_TRANSACTIONS,
+            doctors: INITIAL_DOCTORS,
+            supplies: INITIAL_SUPPLY_ITEMS,
+            goals: INITIAL_TEAM_GOALS,
+            teamMembers: INITIAL_TEAM_MEMBERS,
+            monthlyGoal: 50000
+          });
+        } catch (err) {
+          console.error('[Firebase] Erro ao restaurar dados:', err);
+        }
+      }
     }
   };
+
+  const firstName = useMemo(() => {
+    const raw = userProfile?.displayName || firebaseUser?.displayName || '';
+    const cleaned = raw.trim();
+    if (!cleaned) return ROLE_LABELS[userRole];
+    const parts = cleaned.split(/\s+/);
+    if ((parts[0] === 'Dr.' || parts[0] === 'Dra.') && parts[1]) {
+      return `${parts[0]} ${parts[1]}`;
+    }
+    return parts[0];
+  }, [userProfile, firebaseUser, userRole]);
 
   const getHeaderMeta = () => {
     switch (activeTab) {
       case 'visao-geral':
         return {
-          title: userRole === 'gerente' ? 'Bem-vinda de volta, Dra. Ana' : 'Bem-vinda, Mariana',
-          subtitle: `${currentLiveDate || 'Hoje'} · ${isFirebaseConfigured ? 'Nuvem sincronizada' : 'Dados locais ativos'}`
+          title: `Olá, ${firstName}`,
+          subtitle: `${currentLiveDate || 'Hoje'} · Perfil ${ROLE_LABELS[userRole]}`
         };
       case 'financeiro':
         return {
@@ -564,8 +786,11 @@ export default function App() {
         };
       case 'doutora':
         return {
-          title: 'Dentistas',
-          subtitle: 'Produção individual, metas, conversão de avaliações e escala'
+          title: userRole === 'funcionario' ? 'Escala dos consultórios' : 'Dentistas',
+          subtitle:
+            userRole === 'funcionario'
+              ? 'Agenda e alocação por consultório e procedimento'
+              : 'Produção individual, metas, conversão de avaliações e escala'
         };
       case 'metas-equipe':
         return {
@@ -597,104 +822,55 @@ export default function App() {
           title: 'Histórico',
           subtitle: 'Registro completo de lançamentos financeiros e emissão de recibos'
         };
+      case 'acessos':
+        return {
+          title: 'Controle de acessos',
+          subtitle: 'Defina permissões para Gestão, Dentista e Funcionário por conta Google'
+        };
       default:
         return { title: 'Visão geral', subtitle: currentLiveDate };
     }
   };
 
-  // MINIMALIST LOGIN SCREEN
-  if (!userRole) {
+  // INITIAL AUTH LOADING STATE
+  if (authLoading) {
     return (
-      <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#FAFAFA] flex flex-col items-center justify-center px-4 py-6 select-none font-sans">
-        <div className="bg-white border border-[#EBEBED] p-6 sm:p-8 rounded-2xl max-w-[380px] w-full space-y-6">
-          <div className="flex flex-col items-center text-center gap-3">
-            <ClinicLogo className="w-12 h-12" />
-            <div>
-              <h1 className="font-display font-semibold text-xl text-[#18181B] tracking-[-0.02em]">
-                Seja Mais Odontologia
-              </h1>
-              <p className="text-xs text-[#71717A] mt-1">
-                Gestão clínica, faturamento e operações
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t border-[#F1F1F3] pt-5 space-y-4">
-            {/* Segmented Role Selector */}
-            <div className="grid grid-cols-2 gap-1 bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium text-[#71717A]">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedLoginRole('gerente');
-                  setPassword('');
-                  setErrorMsg('');
-                }}
-                className={`py-2 rounded-lg transition-all cursor-pointer ${
-                  selectedLoginRole === 'gerente'
-                    ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                    : 'hover:text-[#18181B]'
-                }`}
-              >
-                Gerência
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedLoginRole('funcionario');
-                  setPassword('');
-                  setErrorMsg('');
-                }}
-                className={`py-2 rounded-lg transition-all cursor-pointer ${
-                  selectedLoginRole === 'funcionario'
-                    ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                    : 'hover:text-[#18181B]'
-                }`}
-              >
-                Funcionário
-              </button>
-            </div>
-
-            <form onSubmit={handleLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">
-                  Senha de acesso
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder={selectedLoginRole === 'gerente' ? 'Digite a senha de gerência' : 'Digite a senha de funcionário'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
-                />
-              </div>
-
-              {errorMsg && (
-                <p className="text-xs text-[#DC2626] font-medium">{errorMsg}</p>
-              )}
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold text-sm transition-colors cursor-pointer"
-              >
-                Entrar no sistema
-              </button>
-            </form>
-          </div>
-
-          <div className="bg-[#F7F7F8] border border-[#F1F1F3] px-3.5 py-3 rounded-xl text-[11px] text-[#71717A] space-y-1">
-            <p className="font-medium text-[#52525B]">Acesso de demonstração</p>
-            <p>
-              Gerência: <span className="font-mono text-[#18181B] font-medium">gerente123</span> · Funcionário:{' '}
-              <span className="font-mono text-[#18181B] font-medium">funcionario123</span>
-            </p>
-          </div>
+      <div className="min-h-[100dvh] w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 gap-4 font-sans">
+        <ClinicLogo className="w-11 h-11" />
+        <div className="flex items-center gap-2 text-xs font-medium text-[#71717A]">
+          <Loader2 size={15} className="animate-spin text-[#3795AE]" />
+          <span>Verificando sua sessão Google...</span>
         </div>
       </div>
     );
   }
 
+  // GOOGLE-ONLY LOGIN & REGISTRATION SCREEN
+  if (!firebaseUser || !userProfile) {
+    return (
+      <AuthScreen
+        pendingGoogleUser={firebaseUser}
+        onRegistrationComplete={profile => {
+          setUserProfile(profile);
+          setActiveTab(getDefaultTabForRole(profile.role));
+        }}
+      />
+    );
+  }
+
+  // DEACTIVATED ACCOUNT SCREEN
+  if (!userProfile.active) {
+    return (
+      <InactiveAccountScreen
+        displayName={userProfile.displayName}
+        email={firebaseUser.email}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const headerMeta = getHeaderMeta();
+  const goToDefaultTab = () => setActiveTab(getDefaultTabForRole(userRole));
 
   return (
     <div className="bg-[#FAFAFA] text-[#18181B] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans">
@@ -705,6 +881,12 @@ export default function App() {
         onResetData={handleResetData}
         onLogout={handleLogout}
         userRole={userRole}
+        userInfo={{
+          displayName: userProfile.displayName,
+          email: firebaseUser.email,
+          photoURL: userProfile.photoURL || firebaseUser.photoURL || undefined,
+          clinicName: userProfile.clinicName
+        }}
         isCollapsed={isCollapsed}
         setIsCollapsed={setIsCollapsed}
         mobileOpen={mobileOpen}
@@ -821,8 +1003,8 @@ export default function App() {
                 <span className="tabular-nums">{shortLiveDate || 'Hoje'}</span>
               </div>
 
-              {/* Single Primary Action on Overview */}
-              {activeTab === 'visao-geral' && (
+              {/* Single Primary Action on Overview (Gestão only) */}
+              {activeTab === 'visao-geral' && userRole === 'gestao' && (
                 <button
                   onClick={() => setQuickAddTrigger(prev => prev + 1)}
                   className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
@@ -839,84 +1021,142 @@ export default function App() {
         {/* Main Active View Container */}
         <main className="flex-1 p-3.5 sm:p-6 md:p-8 min-w-0 w-full">
           <div className="max-w-[1400px] mx-auto w-full min-w-0">
-            {activeTab === 'visao-geral' && (
-              <Overview
-                transactions={transactions}
-                doctors={doctors}
-                onAddTransaction={handleAddTransaction}
-                monthlyGoal={monthlyGoal}
-                setMonthlyGoal={setMonthlyGoal}
-                onNavigate={setActiveTab}
-                openAddTrigger={quickAddTrigger}
-              />
+            {dataLoading && doctors.length === 0 && supplies.length === 0 && transactions.length === 0 ? (
+              <div className="py-24 flex flex-col items-center justify-center gap-3 text-xs text-[#71717A]">
+                <Loader2 size={20} className="animate-spin text-[#3795AE]" />
+                <span>Carregando dados da clínica...</span>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'visao-geral' &&
+                  (!canAccessTab(userRole, 'visao-geral') ? (
+                    <AccessDenied
+                      tabName="Visão geral"
+                      requiredLabel="Gestão"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <Overview
+                      transactions={transactions}
+                      doctors={doctors}
+                      onAddTransaction={handleAddTransaction}
+                      monthlyGoal={monthlyGoal}
+                      setMonthlyGoal={setMonthlyGoal}
+                      onNavigate={setActiveTab}
+                      openAddTrigger={quickAddTrigger}
+                    />
+                  ))}
+
+                {activeTab === 'financeiro' &&
+                  (!canAccessTab(userRole, 'financeiro') ? (
+                    <AccessDenied
+                      tabName="Financeiro"
+                      requiredLabel="Gestão"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <Financial
+                      transactions={transactions}
+                      doctors={doctors}
+                      onAddTransaction={handleAddTransaction}
+                      onDeleteTransaction={handleDeleteTransaction}
+                      userRole={userRole}
+                    />
+                  ))}
+
+                {activeTab === 'doutora' && (
+                  <Doctors
+                    doctors={doctors}
+                    transactions={transactions}
+                    onUpdateTarget={handleUpdateDoctorTarget}
+                    onAddTransaction={handleAddTransaction}
+                    onAddDoctor={handleAddDoctor}
+                    onUpdateDoctorStats={handleUpdateDoctorStats}
+                    userRole={userRole}
+                    linkedDoctorId={userProfile.linkedDoctorId}
+                  />
+                )}
+
+                {activeTab === 'metas-equipe' &&
+                  (!canAccessTab(userRole, 'metas-equipe') ? (
+                    <AccessDenied
+                      tabName="Metas & equipe"
+                      requiredLabel="Gestão"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <GoalsTeam
+                      goals={goals}
+                      teamMembers={teamMembers}
+                      doctors={doctors}
+                      transactions={transactions}
+                      onAddGoal={handleAddGoal}
+                      onAddMember={handleAddMember}
+                      onUpdateGoalProgress={handleUpdateGoalProgress}
+                      onToggleStatus={handleToggleStatus}
+                    />
+                  ))}
+
+                {activeTab === 'compras' &&
+                  (!canAccessTab(userRole, 'compras') ? (
+                    <AccessDenied
+                      tabName="Compras e estoque"
+                      requiredLabel="Gestão e Funcionário"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <Supplies
+                      supplies={supplies}
+                      onAddStock={handleAddStock}
+                      onRecordPurchaseExpense={handleRecordPurchaseExpense}
+                      userRole={userRole}
+                      transactions={transactions}
+                      onDeleteTransaction={handleDeleteTransaction}
+                      onAddSupplyItem={handleAddSupplyItem}
+                      onUpdateSupplyItem={handleUpdateSupplyItem}
+                      onDeleteSupplyItem={handleDeleteSupplyItem}
+                    />
+                  ))}
+
+                {activeTab === 'sanitizacao' && <Sanitizacao />}
+
+                {activeTab === 'laboratorio' && <Laboratorio doctors={doctors} />}
+
+                {activeTab === 'utilitarios' && <Utilities doctors={doctors} />}
+
+                {activeTab === 'historico' &&
+                  (!canAccessTab(userRole, 'historico') ? (
+                    <AccessDenied
+                      tabName="Histórico"
+                      requiredLabel="Gestão"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <History transactions={transactions} onDeleteTransaction={handleDeleteTransaction} />
+                  ))}
+
+                {activeTab === 'acessos' &&
+                  (!canAccessTab(userRole, 'acessos') || !uid ? (
+                    <AccessDenied
+                      tabName="Controle de acessos"
+                      requiredLabel="Gestão"
+                      currentRole={userRole}
+                      onGoHome={goToDefaultTab}
+                    />
+                  ) : (
+                    <AccessManagement
+                      clinicId={clinicId}
+                      currentUserUid={uid}
+                      doctors={doctors}
+                    />
+                  ))}
+              </>
             )}
-
-            {activeTab === 'financeiro' &&
-              (userRole === 'funcionario' ? (
-                <AccessDenied tabName="Financeiro" />
-              ) : (
-                <Financial
-                  transactions={transactions}
-                  doctors={doctors}
-                  onAddTransaction={handleAddTransaction}
-                  onDeleteTransaction={handleDeleteTransaction}
-                  userRole={userRole || 'gerente'}
-                />
-              ))}
-
-            {activeTab === 'doutora' && (
-              <Doctors
-                doctors={doctors}
-                transactions={transactions}
-                onUpdateTarget={handleUpdateDoctorTarget}
-                onAddTransaction={handleAddTransaction}
-                onAddDoctor={handleAddDoctor}
-                onUpdateDoctorStats={handleUpdateDoctorStats}
-              />
-            )}
-
-            {activeTab === 'metas-equipe' &&
-              (userRole === 'funcionario' ? (
-                <AccessDenied tabName="Metas & equipe" />
-              ) : (
-                <GoalsTeam
-                  goals={goals}
-                  teamMembers={teamMembers}
-                  doctors={doctors}
-                  transactions={transactions}
-                  onAddGoal={handleAddGoal}
-                  onAddMember={handleAddMember}
-                  onUpdateGoalProgress={handleUpdateGoalProgress}
-                  onToggleStatus={handleToggleStatus}
-                />
-              ))}
-
-            {activeTab === 'compras' && (
-              <Supplies
-                supplies={supplies}
-                onAddStock={handleAddStock}
-                onRecordPurchaseExpense={handleRecordPurchaseExpense}
-                userRole={userRole}
-                transactions={transactions}
-                onDeleteTransaction={handleDeleteTransaction}
-                onAddSupplyItem={handleAddSupplyItem}
-                onUpdateSupplyItem={handleUpdateSupplyItem}
-                onDeleteSupplyItem={handleDeleteSupplyItem}
-              />
-            )}
-
-            {activeTab === 'sanitizacao' && <Sanitizacao />}
-
-            {activeTab === 'laboratorio' && <Laboratorio doctors={doctors} />}
-
-            {activeTab === 'utilitarios' && <Utilities doctors={doctors} />}
-
-            {activeTab === 'historico' &&
-              (userRole === 'funcionario' ? (
-                <AccessDenied tabName="Histórico" />
-              ) : (
-                <History transactions={transactions} onDeleteTransaction={handleDeleteTransaction} />
-              ))}
           </div>
         </main>
       </div>

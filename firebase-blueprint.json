@@ -1,0 +1,248 @@
+{
+  "entities": {
+    "Clinic": {
+      "title": "Clinic",
+      "description": "Shared dental clinic workspace root document.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "ownerUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerUid", "createdAt", "updatedAt"]
+    },
+    "ClinicMember": {
+      "title": "ClinicMember",
+      "description": "Role-based access record linking a verified Google user to the clinic workspace.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "specialty": { "type": "string", "maxLength": 80 },
+        "role": { "type": "string", "enum": ["gestao", "dentista", "funcionario"] },
+        "active": { "type": "boolean" },
+        "linkedDoctorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "clinicId", "displayName", "role", "active", "createdAt", "updatedAt"]
+    },
+    "ClinicInvite": {
+      "title": "ClinicInvite",
+      "description": "Pre-authorized Google email invite assigning a clinic role upon first sign-in.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "role": { "type": "string", "enum": ["gestao", "dentista", "funcionario"] },
+        "linkedDoctorId": { "type": "string", "maxLength": 128 },
+        "invitedByUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "email", "role", "invitedByUid", "createdAt", "updatedAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile document linked to Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "clinicName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "specialty": { "type": "string", "maxLength": 80 },
+        "role": { "type": "string", "enum": ["gestao", "dentista", "funcionario"] },
+        "active": { "type": "boolean" },
+        "linkedDoctorId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "clinicId", "displayName", "clinicName", "role", "active", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "UserPrivateInfo",
+      "description": "Isolated PII document for authenticated users (email and contact phone).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 254 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial income or expense entry for the shared clinic.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "date": { "type": "string", "maxLength": 20 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "doctorName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "value": { "type": "number" },
+        "category": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "type": { "type": "string", "enum": ["receita", "despesa"] },
+        "supplier": { "type": "string", "maxLength": 120 },
+        "subcategory": { "type": "string", "maxLength": 80 },
+        "paymentMethod": { "type": "string", "enum": ["Dinheiro", "Pix", "Cartão de Crédito", "Cartão de Débito", "Boleto", "Outros"] },
+        "status": { "type": "string", "enum": ["pago", "pendente"] },
+        "dueDate": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "date", "description", "doctorName", "value", "category", "type", "createdAt", "updatedAt"]
+    },
+    "Doctor": {
+      "title": "Doctor",
+      "description": "Clinic dentist profile with monthly targets and conversion stats.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "avatar": { "type": "string", "maxLength": 1000 },
+        "role": { "type": "string", "maxLength": 80 },
+        "monthlyTarget": { "type": "number" },
+        "currentEarnings": { "type": "number" },
+        "specialty": { "type": "string", "maxLength": 100 },
+        "cro": { "type": "string", "maxLength": 40 },
+        "email": { "type": "string", "maxLength": 254 },
+        "evaluations": { "type": "number" },
+        "closures": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "name", "avatar", "role", "monthlyTarget", "currentEarnings", "specialty", "cro", "email", "createdAt", "updatedAt"]
+    },
+    "SupplyItem": {
+      "title": "SupplyItem",
+      "description": "Dental supply inventory item with stock and expiration tracking.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "category": { "type": "string", "maxLength": 80 },
+        "stock": { "type": "number" },
+        "minStock": { "type": "number" },
+        "unit": { "type": "string", "maxLength": 40 },
+        "price": { "type": "number" },
+        "expirationDate": { "type": "string", "maxLength": 20 },
+        "batchNumber": { "type": "string", "maxLength": 60 },
+        "supplier": { "type": "string", "maxLength": 120 },
+        "location": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "name", "category", "stock", "minStock", "unit", "price", "createdAt", "updatedAt"]
+    },
+    "TeamGoal": {
+      "title": "TeamGoal",
+      "description": "Clinic or team strategic target.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "targetValue": { "type": "number" },
+        "currentValue": { "type": "number" },
+        "deadline": { "type": "string", "maxLength": 40 },
+        "assignedTo": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "title", "targetValue", "currentValue", "deadline", "assignedTo", "createdAt", "updatedAt"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "Clinic team member presence and role record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "maxLength": 80 },
+        "avatar": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["Ativo", "Em plantão", "Ausente"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "name", "role", "avatar", "status", "createdAt", "updatedAt"]
+    },
+    "ClinicConfig": {
+      "title": "ClinicConfig",
+      "description": "Numeric configuration entry such as monthly revenue goal.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "val": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "clinicId", "ownerId", "val", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profile document."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Isolated PII document (email, phone) strictly accessible to owner or Gestão."
+    },
+    "/clinics/{clinicId}": {
+      "schema": { "$ref": "#/entities/Clinic" },
+      "description": "Shared dental clinic root document."
+    },
+    "/clinics/{clinicId}/members/{memberUid}": {
+      "schema": { "$ref": "#/entities/ClinicMember" },
+      "description": "Clinic role assignments (gestao, dentista, funcionario) and active status."
+    },
+    "/clinics/{clinicId}/invites/{inviteId}": {
+      "schema": { "$ref": "#/entities/ClinicInvite" },
+      "description": "Pre-authorized Google email role invites managed by Gestão."
+    },
+    "/clinics/{clinicId}/transactions/{transactionId}": {
+      "schema": { "$ref": "#/entities/Transaction" },
+      "description": "Shared clinic financial transactions (Gestão full access)."
+    },
+    "/clinics/{clinicId}/doctors/{doctorId}": {
+      "schema": { "$ref": "#/entities/Doctor" },
+      "description": "Shared clinic dentists and targets."
+    },
+    "/clinics/{clinicId}/supplies/{supplyId}": {
+      "schema": { "$ref": "#/entities/SupplyItem" },
+      "description": "Shared clinic dental inventory (Gestão + Funcionário)."
+    },
+    "/clinics/{clinicId}/goals/{goalId}": {
+      "schema": { "$ref": "#/entities/TeamGoal" },
+      "description": "Shared clinic strategic goals (Gestão only)."
+    },
+    "/clinics/{clinicId}/teamMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/TeamMember" },
+      "description": "Shared clinic staff members (Gestão only)."
+    },
+    "/clinics/{clinicId}/config/{configId}": {
+      "schema": { "$ref": "#/entities/ClinicConfig" },
+      "description": "Shared clinic configuration such as monthly_goal (Gestão only)."
+    }
+  }
+}

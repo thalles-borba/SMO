@@ -49,7 +49,7 @@ interface FinancialProps {
   doctors: Doctor[];
   onAddTransaction: (t: Omit<Transaction, 'id' | 'date'> & { date?: string }) => void;
   onDeleteTransaction: (id: string) => void;
-  userRole: 'gerente' | 'funcionario';
+  userRole: 'gestao' | 'dentista' | 'funcionario';
 }
 
 export default function Financial({
@@ -244,7 +244,7 @@ export default function Financial({
       actualBalanceMoney: actualBalanceNum,
       differenceMoney,
       sangria: sangriaNum,
-      closedBy: userRole === 'gerente' ? 'Gerência Principal' : 'Secretaria / Recepção',
+      closedBy: userRole === 'gestao' ? 'Gestão Principal' : 'Equipe Clínica',
       closedAt: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       notes: closureNotes
     };

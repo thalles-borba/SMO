@@ -46,7 +46,7 @@ interface SuppliesProps {
     supplier?: string, 
     subcategory?: string
   ) => void;
-  userRole: 'gerente' | 'funcionario' | null;
+  userRole: 'gestao' | 'dentista' | 'funcionario' | null;
   transactions: Transaction[];
   onDeleteTransaction: (id: string) => void;
   onAddSupplyItem: (item: Omit<SupplyItem, 'id'>) => void;

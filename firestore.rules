@@ -1,0 +1,626 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default-deny all unspecified paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL PRIMITIVES
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email.lower() == 'thallespborba@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function expectedInviteIdForCaller() {
+      return request.auth.token.email.lower().replace('@', '_at_').replace('\\.', '_dot_').replace('[^a-z0-9_\\-]', '_');
+    }
+
+    function memberPath(clinicId, uid) {
+      return /databases/$(database)/documents/clinics/$(clinicId)/members/$(uid);
+    }
+
+    function invitePath(clinicId, inviteId) {
+      return /databases/$(database)/documents/clinics/$(clinicId)/invites/$(inviteId);
+    }
+
+    function isActiveClinicMember(clinicId) {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser()
+        && exists(memberPath(clinicId, request.auth.uid))
+        && get(memberPath(clinicId, request.auth.uid)).data.active == true
+      );
+    }
+
+    function isClinicGestao(clinicId) {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser()
+        && exists(memberPath(clinicId, request.auth.uid))
+        && get(memberPath(clinicId, request.auth.uid)).data.active == true
+        && get(memberPath(clinicId, request.auth.uid)).data.role == 'gestao'
+      );
+    }
+
+    function isClinicRole(clinicId, roleName) {
+      return isVerifiedUser()
+        && exists(memberPath(clinicId, request.auth.uid))
+        && get(memberPath(clinicId, request.auth.uid)).data.active == true
+        && get(memberPath(clinicId, request.auth.uid)).data.role == roleName;
+    }
+
+    function isLinkedDoctor(clinicId, doctorId) {
+      return isClinicRole(clinicId, 'dentista')
+        && 'linkedDoctorId' in get(memberPath(clinicId, request.auth.uid)).data
+        && get(memberPath(clinicId, request.auth.uid)).data.linkedDoctorId == doctorId;
+    }
+
+    function hasTrustedRoleOnCreate(clinicId, requestedRole, requestedLinkedDoctorId) {
+      return isBootstrappedAdmin()
+        || (requestedRole == 'funcionario' && requestedLinkedDoctorId == '')
+        || (
+          exists(invitePath(clinicId, expectedInviteIdForCaller()))
+          && get(invitePath(clinicId, expectedInviteIdForCaller())).data.email == request.auth.token.email.lower()
+          && get(invitePath(clinicId, expectedInviteIdForCaller())).data.role == requestedRole
+          && (
+            (requestedLinkedDoctorId == '' && !('linkedDoctorId' in get(invitePath(clinicId, expectedInviteIdForCaller())).data))
+            || ('linkedDoctorId' in get(invitePath(clinicId, expectedInviteIdForCaller())).data && get(invitePath(clinicId, expectedInviteIdForCaller())).data.linkedDoctorId == requestedLinkedDoctorId)
+          )
+        );
+    }
+
+    function hasClinicDoc(clinicId) {
+      return existsAfter(/databases/$(database)/documents/clinics/$(clinicId));
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATION BLUEPRINTS
+    // =========================================================================
+    function isValidClinic(data, clinicId) {
+      return data.keys().hasAll(['id', 'name', 'ownerUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'name', 'ownerUid', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == clinicId
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && isValidId(data.ownerUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClinicMember(data, clinicId, memberUid) {
+      return data.keys().hasAll(['uid', 'clinicId', 'displayName', 'role', 'active', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'clinicId', 'displayName', 'photoURL', 'specialty', 'role', 'active', 'linkedDoctorId', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid) && data.uid == memberUid
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000))
+        && (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 80))
+        && data.role is string && data.role in ['gestao', 'dentista', 'funcionario']
+        && data.active is bool
+        && (!('linkedDoctorId' in data) || (data.linkedDoctorId is string && data.linkedDoctorId.size() <= 128))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClinicInvite(data, clinicId, inviteId) {
+      return data.keys().hasAll(['id', 'clinicId', 'email', 'role', 'invitedByUid', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'email', 'role', 'linkedDoctorId', 'invitedByUid', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == inviteId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && data.role is string && data.role in ['gestao', 'dentista', 'funcionario']
+        && (!('linkedDoctorId' in data) || (data.linkedDoctorId is string && data.linkedDoctorId.size() <= 128))
+        && isValidId(data.invitedByUid)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'clinicId', 'displayName', 'clinicName', 'role', 'active', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'clinicId', 'displayName', 'photoURL', 'clinicName', 'specialty', 'role', 'active', 'linkedDoctorId', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid) && data.uid == userId
+        && isValidId(data.clinicId)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.clinicName is string && data.clinicName.size() >= 1 && data.clinicName.size() <= 120
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1000))
+        && (!('specialty' in data) || (data.specialty is string && data.specialty.size() <= 80))
+        && data.role is string && data.role in ['gestao', 'dentista', 'funcionario']
+        && data.active is bool
+        && (!('linkedDoctorId' in data) || (data.linkedDoctorId is string && data.linkedDoctorId.size() <= 128))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidUserPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'phone', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid) && data.uid == userId
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 254
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 30))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTransaction(data, clinicId, txId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'date', 'description', 'doctorName', 'value', 'category', 'type', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'date', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == txId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.date is string && data.date.size() >= 4 && data.date.size() <= 20
+        && data.description is string && data.description.size() >= 1 && data.description.size() <= 300
+        && data.doctorName is string && data.doctorName.size() >= 1 && data.doctorName.size() <= 120
+        && data.value is number && data.value >= 0
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.type is string && data.type in ['receita', 'despesa']
+        && (!('supplier' in data) || (data.supplier is string && data.supplier.size() <= 120))
+        && (!('subcategory' in data) || (data.subcategory is string && data.subcategory.size() <= 80))
+        && (!('paymentMethod' in data) || (data.paymentMethod is string && data.paymentMethod in ['Dinheiro', 'Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Outros']))
+        && (!('status' in data) || (data.status is string && data.status in ['pago', 'pendente']))
+        && (!('dueDate' in data) || (data.dueDate is string && data.dueDate.size() <= 20))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDoctor(data, clinicId, doctorId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'name', 'avatar', 'role', 'monthlyTarget', 'currentEarnings', 'specialty', 'cro', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'name', 'avatar', 'role', 'monthlyTarget', 'currentEarnings', 'specialty', 'cro', 'email', 'evaluations', 'closures', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == doctorId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.avatar is string && data.avatar.size() <= 1000
+        && data.role is string && data.role.size() >= 1 && data.role.size() <= 80
+        && data.monthlyTarget is number && data.monthlyTarget >= 0
+        && data.currentEarnings is number && data.currentEarnings >= 0
+        && data.specialty is string && data.specialty.size() >= 1 && data.specialty.size() <= 100
+        && data.cro is string && data.cro.size() <= 40
+        && data.email is string && data.email.size() <= 254
+        && (!('evaluations' in data) || (data.evaluations is number && data.evaluations >= 0))
+        && (!('closures' in data) || (data.closures is number && data.closures >= 0))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidSupplyItem(data, clinicId, supplyId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'name', 'category', 'stock', 'minStock', 'unit', 'price', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'name', 'category', 'stock', 'minStock', 'unit', 'price', 'expirationDate', 'batchNumber', 'supplier', 'location', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == supplyId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 160
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.stock is number && data.stock >= 0
+        && data.minStock is number && data.minStock >= 0
+        && data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 40
+        && data.price is number && data.price >= 0
+        && (!('expirationDate' in data) || (data.expirationDate is string && data.expirationDate.size() <= 20))
+        && (!('batchNumber' in data) || (data.batchNumber is string && data.batchNumber.size() <= 60))
+        && (!('supplier' in data) || (data.supplier is string && data.supplier.size() <= 120))
+        && (!('location' in data) || (data.location is string && data.location.size() <= 120))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTeamGoal(data, clinicId, goalId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'title', 'targetValue', 'currentValue', 'deadline', 'assignedTo', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'title', 'targetValue', 'currentValue', 'deadline', 'assignedTo', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == goalId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 160
+        && data.targetValue is number && data.targetValue >= 0
+        && data.currentValue is number && data.currentValue >= 0
+        && data.deadline is string && data.deadline.size() <= 40
+        && data.assignedTo is string && data.assignedTo.size() >= 1 && data.assignedTo.size() <= 120
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTeamMember(data, clinicId, memberId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'name', 'role', 'avatar', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'name', 'role', 'avatar', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == memberId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 120
+        && data.role is string && data.role.size() >= 1 && data.role.size() <= 80
+        && data.avatar is string && data.avatar.size() <= 1000
+        && data.status is string && data.status in ['Ativo', 'Em plantão', 'Ausente']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidClinicConfig(data, clinicId, configId) {
+      return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'val', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'val', 'createdAt', 'updatedAt'])
+        && isValidId(data.id) && data.id == configId
+        && isValidId(data.clinicId) && data.clinicId == clinicId
+        && isValidId(data.ownerId)
+        && data.val is number && data.val >= 0
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // =========================================================================
+    // USER PROFILES & PII ISOLATION
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isVerifiedUser() && isValidId(userId) && (
+        isOwner(userId) || isClinicGestao('sejamais-principal')
+      );
+      allow list: if false;
+
+      allow create: if isVerifiedUser()
+        && isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().active == true
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && hasTrustedRoleOnCreate(
+          incoming().clinicId,
+          incoming().role,
+          ('linkedDoctorId' in incoming()) ? incoming().linkedDoctorId : ''
+        );
+
+      allow update: if isVerifiedUser()
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (isBootstrappedAdmin() && isOwner(userId) && !('clinicId' in existing()) && incoming().diff(existing()).affectedKeys().hasOnly(['clinicId', 'role', 'active', 'updatedAt'])) ||
+          (isOwner(userId) && ('clinicId' in existing()) && incoming().clinicId == existing().clinicId && incoming().role == existing().role && incoming().active == existing().active && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'clinicName', 'specialty', 'updatedAt'])) ||
+          (isClinicGestao('sejamais-principal') && ('clinicId' in existing()) && incoming().clinicId == existing().clinicId && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'clinicName', 'specialty', 'role', 'active', 'linkedDoctorId', 'updatedAt']))
+        );
+
+      allow delete: if isVerifiedUser() && isValidId(userId) && isBootstrappedAdmin();
+
+      match /private/{docId} {
+        allow get: if isVerifiedUser() && isValidId(userId) && isValidId(docId) && (
+          isOwner(userId) || isClinicGestao('sejamais-principal')
+        );
+        allow list: if false;
+
+        allow create: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && isOwner(userId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/users/$(userId));
+
+        allow update: if isVerifiedUser()
+          && isValidId(userId)
+          && isValidId(docId)
+          && isValidUserPrivateInfo(incoming(), userId)
+          && incoming().uid == existing().uid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (isOwner(userId) || isClinicGestao('sejamais-principal'))
+          && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'phone', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(userId) && isValidId(docId) && isBootstrappedAdmin();
+      }
+    }
+
+    // =========================================================================
+    // SHARED CLINIC WORKSPACE (/clinics/{clinicId})
+    // =========================================================================
+    match /clinics/{clinicId} {
+      allow get: if isVerifiedUser() && isValidId(clinicId) && isActiveClinicMember(clinicId);
+      allow list: if false;
+
+      allow create: if isVerifiedUser()
+        && isValidId(clinicId)
+        && isValidClinic(incoming(), clinicId)
+        && incoming().ownerUid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isBootstrappedAdmin();
+
+      allow update: if isVerifiedUser()
+        && isValidId(clinicId)
+        && isValidClinic(incoming(), clinicId)
+        && incoming().id == existing().id
+        && incoming().ownerUid == existing().ownerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && isClinicGestao(clinicId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'updatedAt']);
+
+      allow delete: if false;
+
+      // Clinic Members (Role Directory — No PII)
+      match /members/{memberUid} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(memberUid) && (
+          isOwner(memberUid) || isClinicGestao(clinicId)
+        );
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(memberUid)
+          && isOwner(memberUid)
+          && isValidClinicMember(incoming(), clinicId, memberUid)
+          && incoming().active == true
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasTrustedRoleOnCreate(
+            clinicId,
+            incoming().role,
+            ('linkedDoctorId' in incoming()) ? incoming().linkedDoctorId : ''
+          );
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(memberUid)
+          && isValidClinicMember(incoming(), clinicId, memberUid)
+          && incoming().uid == existing().uid
+          && incoming().clinicId == existing().clinicId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (isOwner(memberUid) && incoming().role == existing().role && incoming().active == existing().active && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'specialty', 'updatedAt'])) ||
+            (isClinicGestao(clinicId) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'specialty', 'role', 'active', 'linkedDoctorId', 'updatedAt']))
+          );
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(memberUid) && isClinicGestao(clinicId) && memberUid != request.auth.uid;
+      }
+
+      // Pre-Authorized Invites by Google Email
+      match /invites/{inviteId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(inviteId) && (
+          inviteId == expectedInviteIdForCaller() || isClinicGestao(clinicId)
+        );
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(inviteId)
+          && isValidClinicInvite(incoming(), clinicId, inviteId)
+          && incoming().invitedByUid == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(inviteId)
+          && isValidClinicInvite(incoming(), clinicId, inviteId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().email == existing().email
+          && incoming().invitedByUid == existing().invitedByUid
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['role', 'linkedDoctorId', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(inviteId) && (
+          isClinicGestao(clinicId) || inviteId == expectedInviteIdForCaller()
+        );
+      }
+
+      // Shared Clinic Transactions
+      match /transactions/{transactionId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(transactionId) && isClinicGestao(clinicId);
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(transactionId)
+          && isValidTransaction(incoming(), clinicId, transactionId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && (
+            isClinicGestao(clinicId) ||
+            (isClinicRole(clinicId, 'funcionario') && incoming().type == 'despesa' && incoming().category == 'Materiais') ||
+            (isClinicRole(clinicId, 'dentista') && incoming().type == 'receita')
+          );
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(transactionId)
+          && isValidTransaction(incoming(), clinicId, transactionId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['date', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(transactionId) && isClinicGestao(clinicId);
+      }
+
+      // Shared Clinic Doctors
+      match /doctors/{doctorId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(doctorId) && isActiveClinicMember(clinicId);
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isActiveClinicMember(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(doctorId)
+          && isValidDoctor(incoming(), clinicId, doctorId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && isClinicGestao(clinicId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(doctorId)
+          && isValidDoctor(incoming(), clinicId, doctorId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (isClinicGestao(clinicId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'avatar', 'role', 'monthlyTarget', 'currentEarnings', 'specialty', 'cro', 'email', 'evaluations', 'closures', 'updatedAt'])) ||
+            (isLinkedDoctor(clinicId, doctorId) && incoming().diff(existing()).affectedKeys().hasOnly(['evaluations', 'closures', 'currentEarnings', 'updatedAt']))
+          );
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(doctorId) && isClinicGestao(clinicId);
+      }
+
+      // Shared Clinic Supplies
+      match /supplies/{supplyId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(supplyId) && (
+          isClinicGestao(clinicId) || isClinicRole(clinicId, 'funcionario')
+        );
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && (
+          isClinicGestao(clinicId) || isClinicRole(clinicId, 'funcionario')
+        );
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(supplyId)
+          && isValidSupplyItem(incoming(), clinicId, supplyId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && (isClinicGestao(clinicId) || isClinicRole(clinicId, 'funcionario'));
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(supplyId)
+          && isValidSupplyItem(incoming(), clinicId, supplyId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (isClinicGestao(clinicId) || isClinicRole(clinicId, 'funcionario'))
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'category', 'stock', 'minStock', 'unit', 'price', 'expirationDate', 'batchNumber', 'supplier', 'location', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(supplyId) && (
+          isClinicGestao(clinicId) || isClinicRole(clinicId, 'funcionario')
+        );
+      }
+
+      // Shared Clinic Team Goals
+      match /goals/{goalId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(goalId) && isClinicGestao(clinicId);
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(goalId)
+          && isValidTeamGoal(incoming(), clinicId, goalId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && isClinicGestao(clinicId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(goalId)
+          && isValidTeamGoal(incoming(), clinicId, goalId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'targetValue', 'currentValue', 'deadline', 'assignedTo', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(goalId) && isClinicGestao(clinicId);
+      }
+
+      // Shared Clinic Team Members
+      match /teamMembers/{memberId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(memberId) && isClinicGestao(clinicId);
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(memberId)
+          && isValidTeamMember(incoming(), clinicId, memberId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && isClinicGestao(clinicId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(memberId)
+          && isValidTeamMember(incoming(), clinicId, memberId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'avatar', 'status', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(memberId) && isClinicGestao(clinicId);
+      }
+
+      // Shared Clinic Config
+      match /config/{configId} {
+        allow get: if isVerifiedUser() && isValidId(clinicId) && isValidId(configId) && isClinicGestao(clinicId);
+        allow list: if isVerifiedUser() && resource.data.clinicId == clinicId && isClinicGestao(clinicId);
+
+        allow create: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(configId)
+          && isValidClinicConfig(incoming(), clinicId, configId)
+          && incoming().ownerId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time
+          && hasClinicDoc(clinicId)
+          && isClinicGestao(clinicId);
+
+        allow update: if isVerifiedUser()
+          && isValidId(clinicId)
+          && isValidId(configId)
+          && isValidClinicConfig(incoming(), clinicId, configId)
+          && incoming().id == existing().id
+          && incoming().clinicId == existing().clinicId
+          && incoming().ownerId == existing().ownerId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && isClinicGestao(clinicId)
+          && incoming().diff(existing()).affectedKeys().hasOnly(['val', 'updatedAt']);
+
+        allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(configId) && isClinicGestao(clinicId);
+      }
+    }
+  }
+}

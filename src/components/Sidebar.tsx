@@ -21,8 +21,19 @@ import {
   X,
   Building2,
   ChevronDown,
-  Lock
+  Lock,
+  ShieldCheck
 } from 'lucide-react';
+import { UserRole, ROLE_LABELS } from '../lib/firebase';
+
+export function canAccessTab(role: UserRole, tabId: string): boolean {
+  if (role === 'gestao') return true;
+  if (role === 'dentista') {
+    return ['doutora', 'sanitizacao', 'laboratorio', 'utilitarios'].includes(tabId);
+  }
+  // funcionario
+  return ['compras', 'doutora', 'sanitizacao', 'laboratorio', 'utilitarios'].includes(tabId);
+}
 
 interface AlertCounts {
   compras: number;
@@ -30,12 +41,20 @@ interface AlertCounts {
   laboratorio: number;
 }
 
+interface SidebarUserInfo {
+  displayName: string;
+  email?: string | null;
+  photoURL?: string;
+  clinicName: string;
+}
+
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onResetData: () => void;
   onLogout: () => void;
-  userRole: 'gerente' | 'funcionario';
+  userRole: UserRole;
+  userInfo?: SidebarUserInfo;
   isCollapsed: boolean;
   setIsCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
   mobileOpen: boolean;
@@ -81,6 +100,7 @@ export default function Sidebar({
   onResetData,
   onLogout,
   userRole,
+  userInfo,
   isCollapsed,
   setIsCollapsed,
   mobileOpen,
@@ -88,6 +108,15 @@ export default function Sidebar({
   alertCounts = { compras: 0, sanitizacao: 0, laboratorio: 0 }
 }: SidebarProps) {
   const [opsOpen, setOpsOpen] = useState(true);
+  const clinicTitle = userInfo?.clinicName || 'Seja Mais Odontologia';
+  const roleLabel = ROLE_LABELS[userRole];
+  const displayName = userInfo?.displayName || roleLabel;
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0]?.toUpperCase() || '')
+    .join('') || 'SM';
 
   const primaryItems = [
     { id: 'visao-geral', label: 'Visão geral', icon: LayoutDashboard, badge: 0 },
@@ -101,7 +130,10 @@ export default function Sidebar({
     { id: 'sanitizacao', label: 'Sanitização', icon: ClipboardCheck, badge: alertCounts.sanitizacao },
     { id: 'laboratorio', label: 'Laboratório', icon: FlaskConical, badge: alertCounts.laboratorio },
     { id: 'utilitarios', label: 'Utilitários', icon: Wrench, badge: 0 },
-    { id: 'historico', label: 'Histórico', icon: History, badge: 0 }
+    { id: 'historico', label: 'Histórico', icon: History, badge: 0 },
+    ...(userRole === 'gestao'
+      ? [{ id: 'acessos', label: 'Acessos', icon: ShieldCheck, badge: 0 }]
+      : [])
   ];
 
   const isExpanded = !isCollapsed || mobileOpen;
@@ -114,9 +146,7 @@ export default function Sidebar({
   const renderNavItem = (item: { id: string; label: string; icon: React.ElementType; badge: number }) => {
     const isActive = activeTab === item.id;
     const Icon = item.icon;
-    const isRestricted =
-      userRole === 'funcionario' &&
-      !['visao-geral', 'doutora', 'compras', 'laboratorio', 'sanitizacao'].includes(item.id);
+    const isRestricted = !canAccessTab(userRole, item.id);
 
     return (
       <button
@@ -150,7 +180,7 @@ export default function Sidebar({
               </span>
             )}
             {isRestricted && (
-              <Lock size={13} className="text-[#A1A1AA]" aria-label="Restrito à gerência" />
+              <Lock size={13} className="text-[#A1A1AA]" aria-label="Acesso restrito para este perfil" />
             )}
           </div>
         )}
@@ -211,10 +241,10 @@ export default function Sidebar({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[12.5px] font-semibold text-[#18181B] truncate leading-tight">
-                Seja Mais Odontologia
+                {clinicTitle}
               </p>
               <p className="text-[11px] text-[#71717A] leading-tight mt-0.5">
-                {userRole === 'gerente' ? 'Unidade Principal · Gerência' : 'Unidade Principal · Equipe'}
+                Unidade Principal · {roleLabel}
               </p>
             </div>
           </div>
@@ -223,7 +253,7 @@ export default function Sidebar({
         <div className="mb-4 flex justify-center">
           <div
             className="w-9 h-9 rounded-xl bg-[#EFEFF2]/80 border border-[#E4E4E7]/80 flex items-center justify-center text-[#3795AE]"
-            title={`Seja Mais Odontologia · ${userRole === 'gerente' ? 'Gerência' : 'Equipe'}`}
+            title={`${clinicTitle} · ${roleLabel}`}
           >
             <Building2 size={15} />
           </div>
@@ -268,28 +298,39 @@ export default function Sidebar({
         {isExpanded ? (
           <div className="bg-white border border-[#EBEBED] rounded-2xl p-3 space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#3795AE]/10 text-[#3795AE] border border-[#3795AE]/15 flex items-center justify-center font-semibold text-xs shrink-0">
-                {userRole === 'gerente' ? 'AS' : 'MS'}
-              </div>
+              {userInfo?.photoURL ? (
+                <img
+                  src={userInfo.photoURL}
+                  alt={displayName}
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-full object-cover border border-[#EBEBED] shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#3795AE]/10 text-[#3795AE] border border-[#3795AE]/15 flex items-center justify-center font-semibold text-xs shrink-0">
+                  {initials}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-[#18181B] truncate leading-tight">
-                  {userRole === 'gerente' ? 'Dra. Ana Silva' : 'Mariana Santos'}
+                  {displayName}
                 </p>
-                <p className="text-[11px] text-[#71717A] leading-tight mt-0.5">
-                  {userRole === 'gerente' ? 'Gerência Clínica' : 'Colaboradora'}
+                <p className="text-[11px] text-[#71717A] truncate leading-tight mt-0.5">
+                  {userInfo?.email || roleLabel}
                 </p>
               </div>
             </div>
 
             <div className="border-t border-[#F1F1F3] pt-2 space-y-1">
-              <button
-                onClick={onResetData}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium text-[#52525B] hover:text-[#18181B] hover:bg-[#F4F4F6] transition-colors cursor-pointer"
-                title="Restaurar dados iniciais"
-              >
-                <RefreshCw size={14} className="text-[#71717A]" />
-                <span>Restaurar dados</span>
-              </button>
+              {userRole === 'gestao' && (
+                <button
+                  onClick={onResetData}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium text-[#52525B] hover:text-[#18181B] hover:bg-[#F4F4F6] transition-colors cursor-pointer"
+                  title="Restaurar dados iniciais"
+                >
+                  <RefreshCw size={14} className="text-[#71717A]" />
+                  <span>Restaurar dados</span>
+                </button>
+              )}
               <button
                 onClick={onLogout}
                 className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium text-[#52525B] hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
@@ -302,13 +343,15 @@ export default function Sidebar({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-[#ECECEE]">
-            <button
-              onClick={onResetData}
-              className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] flex items-center justify-center transition-colors cursor-pointer"
-              title="Restaurar dados iniciais"
-            >
-              <RefreshCw size={16} />
-            </button>
+            {userRole === 'gestao' && (
+              <button
+                onClick={onResetData}
+                className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] flex items-center justify-center transition-colors cursor-pointer"
+                title="Restaurar dados iniciais"
+              >
+                <RefreshCw size={16} />
+              </button>
+            )}
             <button
               onClick={onLogout}
               className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#DC2626] hover:bg-[#FEF2F2] flex items-center justify-center transition-colors cursor-pointer"
