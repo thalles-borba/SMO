@@ -1,0 +1,6 @@
+{
+  "name": "Seja Mais Odontologia",
+  "description": "Dashboard completo e interativo para gestão clínica odontológica, controle de metas, desempenho de doutoras, compras de materiais e histórico financeiro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
