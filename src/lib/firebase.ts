@@ -1,8 +1,16 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import {
   getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  indexedDBLocalPersistence,
+  inMemoryPersistence,
+  browserPopupRedirectResolver,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   User
@@ -110,10 +118,29 @@ export const BOOTSTRAPPED_ADMIN_EMAIL = 'thallespborba@gmail.com';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const auth = getAuth(app);
+
+function createAuthInstance() {
+  try {
+    return initializeAuth(app, {
+      persistence: [
+        indexedDBLocalPersistence,
+        browserLocalPersistence,
+        browserSessionPersistence,
+        inMemoryPersistence,
+      ],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth = createAuthInstance();
 export const isFirebaseConfigured = Boolean(firebaseConfig.projectId && firebaseConfig.apiKey);
 
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
@@ -156,9 +183,43 @@ export function handleFirestoreError(
   throw new Error(JSON.stringify(errInfo));
 }
 
-export async function signInWithGoogle(): Promise<User> {
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+export function isRunningInIframe(): boolean {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+export async function completeGoogleRedirectIfPending(): Promise<User | null> {
+  try {
+    const result = await getRedirectResult(auth, browserPopupRedirectResolver);
+    return result?.user || null;
+  } catch (error) {
+    console.error('[Firebase Auth] Erro ao concluir redirecionamento Google:', error);
+    throw error;
+  }
+}
+
+export async function signInWithGoogle(): Promise<User | null> {
+  try {
+    const result = await signInWithPopup(auth, googleProvider, browserPopupRedirectResolver);
+    return result.user;
+  } catch (error: any) {
+    const code = error?.code || '';
+    const shouldFallbackToRedirect =
+      !isRunningInIframe() &&
+      (code === 'auth/popup-blocked' ||
+        code === 'auth/operation-not-supported-in-this-environment' ||
+        code === 'auth/internal-error');
+
+    if (shouldFallbackToRedirect) {
+      await signInWithRedirect(auth, googleProvider, browserPopupRedirectResolver);
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 export async function signOutUser(): Promise<void> {

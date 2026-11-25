@@ -17,6 +17,12 @@ const PORT = 3000;
 // Middleware for parsing JSON body
 app.use(express.json());
 
+// Allow Firebase Google Auth popup window.opener communication across browsers
+app.use((_req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
 // Lazy load Gemini AI Client
 let aiClient: GoogleGenAI | null = null;
 function getGeminiClient() {

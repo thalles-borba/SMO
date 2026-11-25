@@ -15,13 +15,80 @@ import {
   registerUserProfile,
   getInviteForEmail,
   isBootstrappedAdminEmail,
+  isRunningInIframe,
 } from '../lib/firebase';
-import { ShieldCheck, CheckCircle2, Loader2, LogOut, ArrowRight } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Loader2, LogOut, ArrowRight, ExternalLink } from 'lucide-react';
 
 interface AuthScreenProps {
   pendingGoogleUser: User | null;
   onRegistrationComplete: (profile: UserProfile) => void;
   initialMode?: 'login' | 'register';
+  externalAuthError?: string;
+}
+
+function formatGoogleAuthError(err: any): { message: string; showOpenNewTab: boolean } {
+  const code: string = err?.code || '';
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const inIframe = typeof window !== 'undefined' && isRunningInIframe();
+
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+    return {
+      message: 'A janela de autenticação do Google foi fechada antes de concluir.',
+      showOpenNewTab: false,
+    };
+  }
+  if (code === 'auth/popup-blocked') {
+    return {
+      message: 'O navegador bloqueou o pop-up do Google. Permita pop-ups para este site ou abra o app em uma nova aba.',
+      showOpenNewTab: inIframe,
+    };
+  }
+  if (code === 'auth/unauthorized-domain') {
+    return {
+      message: `O domínio atual (${hostname || 'desconhecido'}) não está autorizado no Firebase Authentication. Adicione-o em Firebase Console → Authentication → Settings → Authorized domains.`,
+      showOpenNewTab: false,
+    };
+  }
+  if (code === 'auth/operation-not-allowed') {
+    return {
+      message: 'O provedor Google não está ativado no Firebase Authentication deste projeto.',
+      showOpenNewTab: false,
+    };
+  }
+  if (code === 'auth/network-request-failed') {
+    return {
+      message: 'Falha de conexão. Verifique sua internet e tente novamente.',
+      showOpenNewTab: false,
+    };
+  }
+  if (
+    code === 'auth/operation-not-supported-in-this-environment' ||
+    code === 'auth/web-storage-unsupported'
+  ) {
+    return {
+      message: 'Este navegador ou modo privado bloqueou o armazenamento necessário para o login Google. Abra o aplicativo diretamente no Chrome ou Safari com cookies ativados.',
+      showOpenNewTab: inIframe,
+    };
+  }
+  if (code === 'auth/user-disabled') {
+    return {
+      message: 'Esta conta Google foi desativada no Firebase.',
+      showOpenNewTab: false,
+    };
+  }
+  if (code === 'auth/internal-error') {
+    return {
+      message: inIframe
+        ? 'O navegador bloqueou a janela do Google dentro da prévia incorporada. Abra o aplicativo em uma nova aba para entrar.'
+        : 'Não foi possível concluir a comunicação com o Google (auth/internal-error). Desative bloqueadores de pop-up/cookies de terceiros e tente novamente.',
+      showOpenNewTab: inIframe,
+    };
+  }
+
+  return {
+    message: `Não foi possível autenticar com o Google${code ? ` (${code})` : ''}. Tente novamente.`,
+    showOpenNewTab: inIframe,
+  };
 }
 
 function GoogleIcon({ className = 'w-5 h-5' }: { className?: string }) {
@@ -51,10 +118,12 @@ export default function AuthScreen({
   pendingGoogleUser,
   onRegistrationComplete,
   initialMode = 'login',
+  externalAuthError = '',
 }: AuthScreenProps) {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState(externalAuthError);
+  const [showOpenNewTab, setShowOpenNewTab] = useState(false);
 
   // First-time registration form state (populated from verified Google account)
   const [displayName, setDisplayName] = useState(pendingGoogleUser?.displayName || '');
@@ -64,8 +133,15 @@ export default function AuthScreen({
   const [assignedRole, setAssignedRole] = useState<UserRole>('funcionario');
   const [hasInvite, setHasInvite] = useState(false);
 
+  React.useEffect(() => {
+    if (externalAuthError) {
+      setErrorMsg(externalAuthError);
+    }
+  }, [externalAuthError]);
+
   // Keep displayName synced and detect pre-authorized role when pendingGoogleUser arrives
   React.useEffect(() => {
+    setIsLoading(false);
     if (!pendingGoogleUser) return;
     if (pendingGoogleUser.displayName) {
       setDisplayName(pendingGoogleUser.displayName);
@@ -101,20 +177,19 @@ export default function AuthScreen({
 
   const handleGoogleAuth = async () => {
     setErrorMsg('');
+    setShowOpenNewTab(false);
     setIsLoading(true);
     try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      const code = err?.code || '';
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        setErrorMsg('A janela de autenticação do Google foi fechada antes de concluir.');
-      } else if (code === 'auth/popup-blocked') {
-        setErrorMsg('O navegador bloqueou o pop-up do Google. Permita pop-ups para continuar.');
-      } else if (code === 'auth/network-request-failed') {
-        setErrorMsg('Falha de conexão. Verifique sua internet e tente novamente.');
-      } else {
-        setErrorMsg('Não foi possível autenticar com o Google. Tente novamente.');
+      const user = await signInWithGoogle();
+      // If signInWithPopup succeeded, onAuthStateChanged will transition state; reset loading safely
+      if (user) {
+        setIsLoading(false);
       }
+    } catch (err: any) {
+      console.error('[Firebase Auth] Erro ao autenticar com Google:', err);
+      const formatted = formatGoogleAuthError(err);
+      setErrorMsg(formatted.message);
+      setShowOpenNewTab(formatted.showOpenNewTab);
       setIsLoading(false);
     }
   };
@@ -380,8 +455,19 @@ export default function AuthScreen({
           </div>
 
           {errorMsg && (
-            <div className="text-xs text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-2.5 rounded-xl font-medium text-center">
-              {errorMsg}
+            <div className="text-xs text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-2.5 rounded-xl font-medium text-center space-y-2">
+              <p>{errorMsg}</p>
+              {showOpenNewTab && typeof window !== 'undefined' && (
+                <a
+                  href={window.location.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#FECACA] text-[#B91C1C] hover:bg-[#FEF2F2] font-semibold transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  <span>Abrir em nova aba</span>
+                </a>
+              )}
             </div>
           )}
 

@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   auth,
   onAuthStateChanged,
+  completeGoogleRedirectIfPending,
   signOutUser,
   getUserProfile,
   ensureUserWorkspaceSync,
@@ -141,6 +142,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authRedirectError, setAuthRedirectError] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
 
   // Core stateful database synchronized with shared clinic Firestore collections
@@ -170,6 +172,16 @@ export default function App() {
       year: 'numeric'
     });
     setShortLiveDate(shortFmt);
+  }, []);
+
+  // Complete any pending Google redirect sign-in on startup (mobile/Safari fallback)
+  useEffect(() => {
+    completeGoogleRedirectIfPending().catch((err: any) => {
+      const code = err?.code || '';
+      if (code && code !== 'auth/popup-closed-by-user') {
+        setAuthRedirectError(`Erro ao concluir login Google (${code}). Tente novamente.`);
+      }
+    });
   }, []);
 
   // Listen to Firebase Auth state changes
@@ -850,6 +862,7 @@ export default function App() {
     return (
       <AuthScreen
         pendingGoogleUser={firebaseUser}
+        externalAuthError={authRedirectError}
         onRegistrationComplete={profile => {
           setUserProfile(profile);
           setActiveTab(getDefaultTabForRole(profile.role));
