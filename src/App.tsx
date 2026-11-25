@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Sidebar, { ClinicLogo, canAccessTab } from './components/Sidebar';
 import AuthScreen from './components/AuthScreen';
+import CommandHome from './components/CommandHome';
 import Overview from './components/Overview';
 import Doctors from './components/Doctors';
 import GoalsTeam from './components/GoalsTeam';
@@ -71,10 +72,8 @@ function ensureLocalCleanSlateOnce() {
   }
 }
 
-function getDefaultTabForRole(role: UserRole): string {
-  if (role === 'gestao') return 'visao-geral';
-  if (role === 'dentista') return 'doutora';
-  return 'compras';
+function getDefaultTabForRole(_role: UserRole): string {
+  return 'inicio';
 }
 
 // Minimalist Acesso Restrito View for Restricted Tabs
@@ -155,7 +154,7 @@ function InactiveAccountScreen({
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('visao-geral');
+  const [activeTab, setActiveTab] = useState('inicio');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [quickAddTrigger, setQuickAddTrigger] = useState(0);
@@ -442,7 +441,7 @@ export default function App() {
   const handleLogout = async () => {
     try {
       await signOutUser();
-      setActiveTab('visao-geral');
+      setActiveTab('inicio');
     } catch (err) {
       console.error('[Firebase] Erro ao sair:', err);
     }
@@ -652,7 +651,7 @@ export default function App() {
     setSupplies(prev =>
       prev.map(sup => {
         if (sup.id === id) {
-          const updated = { ...sup, stock: sup.stock + qty };
+          const updated = { ...sup, stock: Math.max(0, sup.stock + qty) };
           if (uid) updateClinicDoc(clinicId, uid, 'supplies', id, updated).catch(console.error);
           return updated;
         }
@@ -801,9 +800,14 @@ export default function App() {
 
   const getHeaderMeta = () => {
     switch (activeTab) {
+      case 'inicio':
+        return {
+          title: '',
+          subtitle: ''
+        };
       case 'visao-geral':
         return {
-          title: `Olá, ${firstName}`,
+          title: 'Visão geral',
           subtitle: `${currentLiveDate || 'Hoje'} · Resumo geral da clínica`
         };
       case 'financeiro':
@@ -900,8 +904,14 @@ export default function App() {
   const headerMeta = getHeaderMeta();
   const goToDefaultTab = () => setActiveTab(getDefaultTabForRole(userRole));
 
+  const isBlankHome = activeTab === 'inicio';
+
   return (
-    <div className="bg-[#F7F8FA] text-[#14181F] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans">
+    <div
+      className={`${
+        isBlankHome ? 'bg-white' : 'bg-[#F7F8FA]'
+      } text-[#14181F] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans transition-colors`}
+    >
       {/* Full-Height Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -929,7 +939,13 @@ export default function App() {
         } ml-0`}
       >
         {/* Clean, Breathable Top Bar */}
-        <header className="sticky top-0 z-20 bg-[#F7F8FA]/95 backdrop-blur-md border-b border-[#E6EAF0] px-4 sm:px-8 lg:px-10 py-4 sm:py-5">
+        <header
+          className={`sticky top-0 z-20 px-4 sm:px-8 lg:px-10 ${
+            isBlankHome
+              ? 'bg-white/95 backdrop-blur-sm py-3.5 sm:py-4'
+              : 'bg-[#F7F8FA]/95 backdrop-blur-md border-b border-[#E6EAF0] py-4 sm:py-5'
+          }`}
+        >
           <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-3 sm:gap-6 min-w-0">
             {/* Left: Clear Mobile Menu Trigger + Page Heading */}
             <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
@@ -943,14 +959,16 @@ export default function App() {
                 <span>Menu</span>
               </button>
 
-              <div className="min-w-0 flex-1">
-                <h1 className="font-display font-semibold text-[18px] sm:text-[24px] text-[#14181F] tracking-[-0.02em] leading-tight truncate">
-                  {headerMeta.title}
-                </h1>
-                <p className="text-[12.5px] sm:text-[13.5px] text-[#647082] mt-0.5 truncate">
-                  {headerMeta.subtitle}
-                </p>
-              </div>
+              {!isBlankHome && (
+                <div className="min-w-0 flex-1">
+                  <h1 className="font-display font-semibold text-[18px] sm:text-[24px] text-[#14181F] tracking-[-0.02em] leading-tight truncate">
+                    {headerMeta.title}
+                  </h1>
+                  <p className="text-[12.5px] sm:text-[13.5px] text-[#647082] mt-0.5 truncate">
+                    {headerMeta.subtitle}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Right: Quiet Alerts + Single Primary Action */}
@@ -1047,7 +1065,11 @@ export default function App() {
         </header>
 
         {/* Main Active View Container */}
-        <main className="flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8 lg:py-9 min-w-0 w-full">
+        <main
+          className={`flex-1 px-4 sm:px-8 lg:px-10 min-w-0 w-full ${
+            isBlankHome ? 'py-2 sm:py-4' : 'py-6 sm:py-8 lg:py-9'
+          }`}
+        >
           <div key={workspaceResetKey} className="max-w-[1280px] mx-auto w-full min-w-0">
             {dataLoading && doctors.length === 0 && supplies.length === 0 && transactions.length === 0 ? (
               <div className="py-28 flex flex-col items-center justify-center gap-3 text-sm text-[#647082]">
@@ -1056,6 +1078,36 @@ export default function App() {
               </div>
             ) : (
               <>
+                {activeTab === 'inicio' && (
+                  <CommandHome
+                    firstName={firstName}
+                    userRole={userRole}
+                    linkedDoctorId={userProfile.linkedDoctorId}
+                    transactions={transactions}
+                    doctors={doctors}
+                    supplies={supplies}
+                    goals={goals}
+                    teamMembers={teamMembers}
+                    monthlyGoal={monthlyGoal}
+                    onAddTransaction={handleAddTransaction}
+                    onDeleteTransaction={handleDeleteTransaction}
+                    onAddSupplyItem={handleAddSupplyItem}
+                    onUpdateSupplyItem={handleUpdateSupplyItem}
+                    onDeleteSupplyItem={handleDeleteSupplyItem}
+                    onAddStock={handleAddStock}
+                    onRecordPurchaseExpense={handleRecordPurchaseExpense}
+                    onAddDoctor={handleAddDoctor}
+                    onUpdateDoctorTarget={handleUpdateDoctorTarget}
+                    onUpdateDoctorStats={handleUpdateDoctorStats}
+                    onSetMonthlyGoal={setMonthlyGoal}
+                    onAddGoal={handleAddGoal}
+                    onUpdateGoalProgress={handleUpdateGoalProgress}
+                    onAddMember={handleAddMember}
+                    onToggleMemberStatus={handleToggleStatus}
+                    onNavigate={setActiveTab}
+                  />
+                )}
+
                 {activeTab === 'visao-geral' &&
                   (!canAccessTab(userRole, 'visao-geral') ? (
                     <AccessDenied

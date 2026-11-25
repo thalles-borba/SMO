@@ -5,6 +5,7 @@
 
 import React from 'react';
 import {
+  Home,
   LayoutDashboard,
   Users,
   ShoppingCart,
@@ -25,6 +26,7 @@ import {
 import { UserRole, ROLE_LABELS } from '../lib/firebase';
 
 export function canAccessTab(role: UserRole, tabId: string): boolean {
+  if (tabId === 'inicio') return true;
   if (role === 'gestao') return true;
   if (role === 'dentista') {
     return ['doutora', 'sanitizacao', 'laboratorio', 'utilitarios'].includes(tabId);
@@ -128,9 +130,12 @@ export default function Sidebar({
     userRole === 'gestao'
       ? [
           {
+            items: [{ id: 'inicio', label: 'Início', icon: Home, badge: 0 }]
+          },
+          {
             title: 'Gestão',
             items: [
-              { id: 'visao-geral', label: 'Início', icon: LayoutDashboard, badge: 0 },
+              { id: 'visao-geral', label: 'Visão geral', icon: LayoutDashboard, badge: 0 },
               { id: 'financeiro', label: 'Financeiro', icon: DollarSign, badge: 0 },
               { id: 'doutora', label: 'Dentistas e escala', icon: Stethoscope, badge: 0 },
               { id: 'metas-equipe', label: 'Metas e equipe', icon: Users, badge: 0 },
@@ -154,6 +159,9 @@ export default function Sidebar({
       : userRole === 'dentista'
       ? [
           {
+            items: [{ id: 'inicio', label: 'Início', icon: Home, badge: 0 }]
+          },
+          {
             title: 'Minha rotina',
             items: [
               { id: 'doutora', label: 'Meu desempenho', icon: Stethoscope, badge: 0 },
@@ -164,6 +172,9 @@ export default function Sidebar({
           }
         ]
       : [
+          {
+            items: [{ id: 'inicio', label: 'Início', icon: Home, badge: 0 }]
+          },
           {
             title: 'Minha rotina',
             items: [
