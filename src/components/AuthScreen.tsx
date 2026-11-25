@@ -236,109 +236,106 @@ export default function AuthScreen({
   // STEP 2: COMPLETE REGISTRATION FOR FIRST-TIME GOOGLE USERS
   if (pendingGoogleUser) {
     return (
-      <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#FAFAFA] flex flex-col items-center justify-center px-4 py-6 select-none font-sans">
-        <div className="bg-white border border-[#EBEBED] p-6 sm:p-8 rounded-2xl max-w-[420px] w-full space-y-6">
+      <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#F7F8FA] flex flex-col items-center justify-center px-4 py-8 select-none font-sans">
+        <div className="bg-white border border-[#E6EAF0] p-7 sm:p-9 rounded-3xl max-w-[460px] w-full space-y-6">
           <div className="flex flex-col items-center text-center gap-3">
-            <ClinicLogo className="w-11 h-11" />
-            <div>
-              <h1 className="font-display font-semibold text-xl text-[#18181B] tracking-[-0.02em]">
-                Complete seu cadastro
+            <ClinicLogo className="w-12 h-12" />
+            <div className="space-y-1">
+              <h1 className="font-display font-semibold text-2xl text-[#14181F] tracking-[-0.02em]">
+                Finalize seu cadastro
               </h1>
-              <p className="text-xs text-[#71717A] mt-1">
-                Confirme seus dados para criar seu ambiente clínico
+              <p className="text-sm text-[#647082]">
+                Confirme seu nome para começar a usar o painel da clínica.
               </p>
             </div>
           </div>
 
           {/* Verified Google Account Summary */}
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-[#F7F7F8] border border-[#EBEBED]">
+          <div className="flex items-center gap-3.5 p-4 rounded-2xl bg-[#F7F8FA] border border-[#E6EAF0]">
             {pendingGoogleUser.photoURL ? (
               <img
                 src={pendingGoogleUser.photoURL}
                 alt={pendingGoogleUser.displayName || 'Conta Google'}
                 referrerPolicy="no-referrer"
-                className="w-10 h-10 rounded-full object-cover border border-[#EBEBED] shrink-0"
+                className="w-11 h-11 rounded-full object-cover border border-[#E6EAF0] shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-[#3795AE]/15 text-[#3795AE] font-semibold text-sm flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-full bg-[#3795AE]/15 text-[#3795AE] font-semibold text-sm flex items-center justify-center shrink-0">
                 {(pendingGoogleUser.displayName || pendingGoogleUser.email || 'G')[0].toUpperCase()}
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-[#18181B] truncate">
+              <p className="text-sm font-semibold text-[#14181F] truncate">
                 {pendingGoogleUser.email}
               </p>
-              <p className="text-[11px] text-[#16A34A] font-medium flex items-center gap-1 mt-0.5">
-                <CheckCircle2 size={12} />
-                <span>Conta Google verificada</span>
+              <p className="text-xs text-[#15803D] font-medium flex items-center gap-1.5 mt-0.5">
+                <CheckCircle2 size={14} />
+                <span>Conta Google conectada · Perfil {ROLE_LABELS[assignedRole]}</span>
               </p>
             </div>
-            <span className="px-2.5 py-1 rounded-lg bg-white border border-[#E4E4E7] text-[11px] font-semibold text-[#3795AE] shrink-0">
-              {ROLE_LABELS[assignedRole]}
-            </span>
           </div>
 
-          <p className="text-[11px] text-[#71717A] leading-relaxed -mt-2">
+          <p className="text-[13px] text-[#647082] leading-relaxed">
             {hasInvite ? (
               <>
-                Seu e-mail foi pré-autorizado com o perfil <strong className="text-[#18181B] font-semibold">{ROLE_LABELS[assignedRole]}</strong>.
+                Seu acesso já está liberado como <strong className="text-[#14181F] font-semibold">{ROLE_LABELS[assignedRole]}</strong>.
               </>
             ) : (
               <>
-                Novos cadastros iniciam com o perfil <strong className="text-[#18181B] font-semibold">Funcionário</strong>. A Gestão pode alterar seu nível de acesso a qualquer momento.
+                Seu acesso inicia como <strong className="text-[#14181F] font-semibold">Funcionário</strong>. Se precisar de outro perfil, a Gestão pode ajustar depois.
               </>
             )}
           </p>
 
           <form onSubmit={handleCompleteRegistration} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-[#52525B] mb-1.5">
-                Nome completo
+              <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                Seu nome completo
               </label>
               <input
                 type="text"
                 required
                 maxLength={120}
-                placeholder="Ex: Dra. Ana Silva"
+                placeholder="Digite seu nome"
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
-                className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
+                className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[#52525B] mb-1.5">
+              <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
                 Nome da clínica
               </label>
               <input
                 type="text"
                 required
                 maxLength={120}
-                placeholder="Ex: Seja Mais Odontologia"
+                placeholder="Seja Mais Odontologia"
                 value={clinicName}
                 onChange={e => setClinicName(e.target.value)}
-                className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
+                className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">
-                  Especialidade / cargo <span className="text-[#A1A1AA]">(opcional)</span>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  Função <span className="text-[#94A0B2] font-normal">(opcional)</span>
                 </label>
                 <input
                   type="text"
                   maxLength={80}
-                  placeholder="Ex: Gestão Clínica"
+                  placeholder="Ex: Recepção, ASB, Dentista"
                   value={specialty}
                   onChange={e => setSpecialty(e.target.value)}
-                  className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">
-                  WhatsApp <span className="text-[#A1A1AA]">(opcional)</span>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  WhatsApp <span className="text-[#94A0B2] font-normal">(opcional)</span>
                 </label>
                 <input
                   type="tel"
@@ -346,13 +343,13 @@ export default function AuthScreen({
                   placeholder="(11) 99999-9999"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15 transition-all"
                 />
               </div>
             </div>
 
             {errorMsg && (
-              <p className="text-xs text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-3 py-2 rounded-xl font-medium">
+              <p className="text-sm text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3 rounded-xl font-medium">
                 {errorMsg}
               </p>
             )}
@@ -360,31 +357,31 @@ export default function AuthScreen({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] disabled:opacity-60 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="w-full min-h-[48px] py-3 px-5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] disabled:opacity-60 text-white font-semibold text-sm flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               {isLoading ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
-                  <span>Criando sua conta...</span>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Salvando cadastro...</span>
                 </>
               ) : (
                 <>
-                  <span>Concluir cadastro e acessar</span>
-                  <ArrowRight size={15} />
+                  <span>Concluir e entrar</span>
+                  <ArrowRight size={17} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="border-t border-[#F1F1F3] pt-4 text-center">
+          <div className="border-t border-[#ECEFF3] pt-4 text-center">
             <button
               type="button"
               onClick={handleSwitchAccount}
               disabled={isLoading}
-              className="text-xs text-[#71717A] hover:text-[#18181B] inline-flex items-center gap-1.5 font-medium transition-colors cursor-pointer"
+              className="text-[13px] text-[#647082] hover:text-[#14181F] inline-flex items-center gap-2 font-medium transition-colors cursor-pointer py-1"
             >
-              <LogOut size={13} />
-              <span>Usar outra conta Google</span>
+              <LogOut size={15} />
+              <span>Trocar de conta Google</span>
             </button>
           </div>
         </div>
@@ -392,38 +389,38 @@ export default function AuthScreen({
     );
   }
 
-  // STEP 1: MINIMALIST GOOGLE-ONLY LOGIN & REGISTRATION SCREEN
+  // STEP 1: CALM, SIMPLE GOOGLE LOGIN & REGISTRATION SCREEN
   return (
-    <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#FAFAFA] flex flex-col items-center justify-center px-4 py-6 select-none font-sans">
-      <div className="bg-white border border-[#EBEBED] p-6 sm:p-8 rounded-2xl max-w-[400px] w-full space-y-6">
+    <div className="min-h-[100dvh] w-full overflow-x-clip bg-[#F7F8FA] flex flex-col items-center justify-center px-4 py-8 select-none font-sans">
+      <div className="bg-white border border-[#E6EAF0] p-7 sm:p-10 rounded-3xl max-w-[430px] w-full space-y-7">
         {/* Brand Header */}
-        <div className="flex flex-col items-center text-center gap-3">
-          <ClinicLogo className="w-12 h-12" />
-          <div>
-            <h1 className="font-display font-semibold text-xl text-[#18181B] tracking-[-0.02em]">
+        <div className="flex flex-col items-center text-center gap-3.5">
+          <ClinicLogo className="w-14 h-14" />
+          <div className="space-y-1">
+            <h1 className="font-display font-semibold text-2xl text-[#14181F] tracking-[-0.02em]">
               Seja Mais Odontologia
             </h1>
-            <p className="text-xs text-[#71717A] mt-1">
-              Gestão clínica, faturamento e operações
+            <p className="text-sm text-[#647082]">
+              Sistema da clínica
             </p>
           </div>
         </div>
 
-        {/* Clean Segmented Toggle: Login / Cadastro */}
-        <div className="grid grid-cols-2 gap-1 bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium text-[#71717A]">
+        {/* Clean Segmented Toggle: Entrar / Primeiro acesso */}
+        <div className="grid grid-cols-2 gap-1.5 bg-[#F1F4F7] p-1.5 rounded-xl text-sm font-medium text-[#647082]">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setErrorMsg('');
             }}
-            className={`py-2 rounded-lg transition-all cursor-pointer ${
+            className={`py-2.5 rounded-lg transition-all cursor-pointer ${
               mode === 'login'
-                ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                : 'hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                : 'hover:text-[#14181F]'
             }`}
           >
-            Entrar
+            Já tenho acesso
           </button>
           <button
             type="button"
@@ -431,40 +428,40 @@ export default function AuthScreen({
               setMode('register');
               setErrorMsg('');
             }}
-            className={`py-2 rounded-lg transition-all cursor-pointer ${
+            className={`py-2.5 rounded-lg transition-all cursor-pointer ${
               mode === 'register'
-                ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                : 'hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                : 'hover:text-[#14181F]'
             }`}
           >
-            Criar conta
+            Primeiro acesso
           </button>
         </div>
 
         {/* Auth Body */}
-        <div className="space-y-4">
-          <div className="text-center space-y-1">
-            <h2 className="text-[15px] font-semibold text-[#18181B]">
-              {mode === 'login' ? 'Acesse sua clínica' : 'Cadastre sua clínica'}
+        <div className="space-y-5">
+          <div className="text-center space-y-1.5">
+            <h2 className="text-base font-semibold text-[#14181F]">
+              {mode === 'login' ? 'Entre com sua conta Google' : 'Crie seu acesso com o Google'}
             </h2>
-            <p className="text-xs text-[#71717A] leading-relaxed">
+            <p className="text-sm text-[#647082] leading-relaxed">
               {mode === 'login'
-                ? 'Entre com sua conta Google para sincronizar dados financeiros, equipe e estoque em tempo real.'
-                : 'Crie seu acesso em segundos com sua conta Google. No primeiro acesso, basta confirmar o nome da clínica.'}
+                ? 'Clique no botão abaixo e escolha o seu e-mail do Google para entrar.'
+                : 'Não precisa criar senha. Basta clicar abaixo e escolher sua conta Google.'}
             </p>
           </div>
 
           {errorMsg && (
-            <div className="text-xs text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-3.5 py-2.5 rounded-xl font-medium text-center space-y-2">
+            <div className="text-[13px] text-[#DC2626] bg-[#FEF2F2] border border-[#FECACA] px-4 py-3.5 rounded-xl font-medium text-center space-y-2.5">
               <p>{errorMsg}</p>
               {showOpenNewTab && typeof window !== 'undefined' && (
                 <a
                   href={window.location.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-[#FECACA] text-[#B91C1C] hover:bg-[#FEF2F2] font-semibold transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-white border border-[#FECACA] text-[#B91C1C] hover:bg-[#FEF2F2] font-semibold transition-colors"
                 >
-                  <ExternalLink size={13} />
+                  <ExternalLink size={14} />
                   <span>Abrir em nova aba</span>
                 </a>
               )}
@@ -476,62 +473,29 @@ export default function AuthScreen({
             type="button"
             onClick={handleGoogleAuth}
             disabled={isLoading}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-[#FAFAFA] active:bg-[#F4F4F6] border border-[#E4E4E7] hover:border-[#D4D4D8] disabled:opacity-60 text-[#18181B] font-semibold text-sm flex items-center justify-center gap-3 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.04)] cursor-pointer"
+            className="w-full min-h-[52px] py-3.5 px-5 rounded-xl bg-white hover:bg-[#F8FAFC] active:bg-[#F1F4F7] border border-[#D4DBE5] hover:border-[#3795AE] disabled:opacity-60 text-[#14181F] font-semibold text-[15px] flex items-center justify-center gap-3 transition-all shadow-xs cursor-pointer"
           >
             {isLoading ? (
               <>
-                <Loader2 size={18} className="animate-spin text-[#3795AE]" />
-                <span>Conectando ao Google...</span>
+                <Loader2 size={20} className="animate-spin text-[#3795AE]" />
+                <span>Abrindo Google...</span>
               </>
             ) : (
               <>
                 <GoogleIcon className="w-5 h-5 shrink-0" />
                 <span>
-                  {mode === 'login' ? 'Continuar com Google' : 'Cadastrar com Google'}
+                  {mode === 'login' ? 'Entrar com Google' : 'Cadastrar com Google'}
                 </span>
               </>
             )}
           </button>
-
-          {/* Footer Switch Link */}
-          <p className="text-center text-xs text-[#71717A]">
-            {mode === 'login' ? (
-              <>
-                Ainda não tem conta?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('register');
-                    setErrorMsg('');
-                  }}
-                  className="text-[#3795AE] hover:text-[#2B7E94] font-semibold cursor-pointer"
-                >
-                  Criar conta
-                </button>
-              </>
-            ) : (
-              <>
-                Já possui acesso?{' '}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('login');
-                    setErrorMsg('');
-                  }}
-                  className="text-[#3795AE] hover:text-[#2B7E94] font-semibold cursor-pointer"
-                >
-                  Entrar
-                </button>
-              </>
-            )}
-          </p>
         </div>
 
-        {/* Security Assurance Strip */}
-        <div className="bg-[#F7F7F8] border border-[#F1F1F3] px-3.5 py-3 rounded-xl flex items-start gap-2.5 text-[11px] text-[#71717A]">
-          <ShieldCheck size={15} className="text-[#3795AE] shrink-0 mt-0.5" />
+        {/* Calm Security Assurance Footer */}
+        <div className="pt-4 border-t border-[#ECEFF3] flex items-start gap-3 text-[13px] text-[#647082]">
+          <ShieldCheck size={18} className="text-[#3795AE] shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            Autenticação exclusiva via <strong className="text-[#3F3F46] font-medium">Google Firebase</strong> com controle de permissões por perfil (<strong className="text-[#3F3F46] font-medium">Gestão</strong>, <strong className="text-[#3F3F46] font-medium">Dentista</strong> e <strong className="text-[#3F3F46] font-medium">Funcionário</strong>).
+            Cada pessoa vê apenas as telas da sua função (<strong className="text-[#14181F] font-medium">Gestão</strong>, <strong className="text-[#14181F] font-medium">Dentista</strong> ou <strong className="text-[#14181F] font-medium">Funcionário</strong>).
           </p>
         </div>
       </div>

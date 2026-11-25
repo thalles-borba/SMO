@@ -16,7 +16,9 @@ import {
   ArrowUpRight,
   Search,
   X,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Stethoscope,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -82,7 +84,7 @@ export default function Overview({
     }
   }, [doctors, doctorName]);
 
-  // 1. Core Metrics dynamically calculated
+  // Core Metrics dynamically calculated
   const totalRevenues = useMemo(
     () => transactions.filter(t => t.type === 'receita').reduce((sum, t) => sum + t.value, 0),
     [transactions]
@@ -110,7 +112,7 @@ export default function Overview({
   const revenueCount = transactions.filter(t => t.type === 'receita').length;
   const avgTicket = revenueCount > 0 ? Math.round(totalRevenues / revenueCount) : 0;
 
-  // 2. Doctor rankings dynamically calculated
+  // Doctor rankings dynamically calculated
   const doctorRevenues = useMemo(() => {
     return doctors
       .map(doc => {
@@ -132,7 +134,7 @@ export default function Overview({
     return evalSum > 0 ? Math.round((closeSum / evalSum) * 100) : 0;
   }, [doctors]);
 
-  // 3. Clean traditional chart data derived from real transactions
+  // Chart data derived strictly from real transactions
   const timelineData = useMemo(() => {
     const map = new Map<string, { rawDate: string; label: string; receitas: number; despesas: number }>();
     transactions.forEach(t => {
@@ -160,18 +162,7 @@ export default function Overview({
       .sort((a, b) => b.total - a.total);
   }, [transactions]);
 
-  // Sparkline micro-series for KPI cards
-  const revenueSpark = useMemo(() => {
-    const pts = timelineData.filter(d => d.receitas > 0).slice(-8);
-    return pts.length >= 2 ? pts : [{ label: '1', receitas: 3500 }, { label: '2', receitas: 6000 }, { label: '3', receitas: 8000 }, { label: '4', receitas: 7000 }];
-  }, [timelineData]);
-
-  const expenseSpark = useMemo(() => {
-    const pts = timelineData.filter(d => d.despesas > 0).slice(-8);
-    return pts.length >= 2 ? pts : [{ label: '1', despesas: 900 }, { label: '2', despesas: 1200 }, { label: '3', despesas: 600 }, { label: '4', despesas: 850 }];
-  }, [timelineData]);
-
-  // Filtered recent transactions for the bottom table
+  // Filtered recent transactions
   const recentTransactions = useMemo(() => {
     const q = recentSearch.trim().toLowerCase();
     return [...transactions]
@@ -192,7 +183,7 @@ export default function Overview({
 
     onAddTransaction({
       description,
-      doctorName: type === 'despesa' ? 'Administração' : doctorName,
+      doctorName: type === 'despesa' ? 'Administração' : doctorName || 'Clínica',
       value: parseFloat(value),
       category,
       type
@@ -205,13 +196,12 @@ export default function Overview({
 
   const handleGoalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newGoalValue > 0) {
+    if (newGoalValue >= 0) {
       setMonthlyGoal(newGoalValue);
       setShowGoalModal(false);
     }
   };
 
-  // Clinical Advisor insights from Gemini
   const fetchAiAdvice = async (customQuestion = '') => {
     setLoadingAi(true);
     setAiAdvice(null);
@@ -244,10 +234,10 @@ export default function Overview({
       if (response.ok) {
         setAiAdvice(data.text);
       } else {
-        setAiAdvice(`Erro ao carregar insights da IA: ${data.error}`);
+        setAiAdvice(`Não foi possível gerar o resumo agora: ${data.error}`);
       }
     } catch {
-      setAiAdvice('Erro de conexão com o servidor de IA. Por favor, tente novamente.');
+      setAiAdvice('Erro de conexão ao gerar a análise. Tente novamente em instantes.');
     } finally {
       setLoadingAi(false);
     }
@@ -265,83 +255,148 @@ export default function Overview({
     return cleaned.slice(0, 2).toUpperCase();
   };
 
+  const isFreshWorkspace = transactions.length === 0 && doctors.length === 0;
+
   return (
-    <div className="space-y-4 sm:space-y-5 w-full min-w-0">
-      {/* ROW 1: 4 CLEAN WHITE KPI CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5 sm:gap-4">
-        {/* KPI 1: Faturamento */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
-                <DollarSign size={15} />
-              </div>
-              <span className="text-[13px] font-medium text-[#52525B] truncate">Faturamento do mês</span>
-            </div>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('financeiro')}
-                className="text-[#A1A1AA] hover:text-[#18181B] transition-colors cursor-pointer"
-                title="Abrir Financeiro"
-              >
-                <ArrowUpRight size={15} />
-              </button>
-            )}
+    <div className="space-y-7 sm:space-y-8 w-full min-w-0">
+      {/* GUIDED QUICK-START CARD (Only shown when workspace is completely empty) */}
+      {isFreshWorkspace && (
+        <section className="bg-white border border-[#E6EAF0] rounded-2xl p-6 sm:p-8 space-y-5">
+          <div className="space-y-1">
+            <h2 className="font-display font-semibold text-lg text-[#14181F]">
+              Comece configurando a clínica em 3 passos simples
+            </h2>
+            <p className="text-sm text-[#647082]">
+              Escolha qualquer passo abaixo para começar. Os números do painel serão atualizados automaticamente.
+            </p>
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
-                R$ {totalRevenues.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              type="button"
+              onClick={() => onNavigate?.('doutora')}
+              className="text-left p-5 rounded-2xl bg-[#F7F8FA] hover:bg-[#F1F4F7] border border-transparent hover:border-[#3795AE]/30 transition-all cursor-pointer space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="w-8 h-8 rounded-xl bg-white border border-[#E6EAF0] text-[#3795AE] flex items-center justify-center font-semibold text-sm">
+                  1
+                </span>
+                <ArrowRight size={16} className="text-[#94A0B2]" />
               </div>
-              <div className="flex items-center gap-1.5 mt-2.5 text-xs">
-                <span className="font-semibold text-[#16A34A] tabular-nums">+12,5%</span>
-                <span className="text-[#71717A] truncate">vs. mês anterior</span>
+              <div>
+                <h3 className="text-sm font-semibold text-[#14181F]">Cadastrar dentistas</h3>
+                <p className="text-[13px] text-[#647082] mt-1">
+                  Adicione as profissionais da clínica e defina a meta de cada uma.
+                </p>
               </div>
-            </div>
+            </button>
 
-            <div className="w-16 sm:w-20 h-11 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueSpark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-                  <Bar dataKey="receitas" fill="#3795AE" radius={[3, 3, 0, 0]} opacity={0.85} />
-                </BarChart>
-              </ResponsiveContainer>
+            <button
+              type="button"
+              onClick={() => {
+                setNewGoalValue(monthlyGoal);
+                setShowGoalModal(true);
+              }}
+              className="text-left p-5 rounded-2xl bg-[#F7F8FA] hover:bg-[#F1F4F7] border border-transparent hover:border-[#3795AE]/30 transition-all cursor-pointer space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="w-8 h-8 rounded-xl bg-white border border-[#E6EAF0] text-[#3795AE] flex items-center justify-center font-semibold text-sm">
+                  2
+                </span>
+                <ArrowRight size={16} className="text-[#94A0B2]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#14181F]">Definir meta do mês</h3>
+                <p className="text-[13px] text-[#647082] mt-1">
+                  Informe o valor de faturamento que a clínica deseja alcançar.
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="text-left p-5 rounded-2xl bg-[#F7F8FA] hover:bg-[#F1F4F7] border border-transparent hover:border-[#3795AE]/30 transition-all cursor-pointer space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <span className="w-8 h-8 rounded-xl bg-white border border-[#E6EAF0] text-[#3795AE] flex items-center justify-center font-semibold text-sm">
+                  3
+                </span>
+                <ArrowRight size={16} className="text-[#94A0B2]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[#14181F]">Registrar primeiro lançamento</h3>
+                <p className="text-[13px] text-[#647082] mt-1">
+                  Lance um atendimento realizado ou uma compra de material.
+                </p>
+              </div>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* ROW 1: 4 AIRY, EASY-TO-SCAN KPI CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+        {/* KPI 1: Faturamento */}
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 flex flex-col justify-between gap-5 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[13.5px] font-medium text-[#647082]">Faturamento do mês</span>
+            <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+              <DollarSign size={18} />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="text-[28px] font-semibold text-[#14181F] tracking-[-0.025em] tabular-nums leading-none">
+              R$ {totalRevenues.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-1 text-[13px] text-[#647082]">
+              <span className="tabular-nums truncate">
+                {revenueCount === 0
+                  ? 'Nenhuma entrada ainda'
+                  : `${revenueCount} ${revenueCount === 1 ? 'entrada registrada' : 'entradas registradas'}`}
+              </span>
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('financeiro')}
+                  className="text-[#3795AE] hover:text-[#2B7E94] font-medium inline-flex items-center gap-0.5 cursor-pointer shrink-0"
+                >
+                  <span>Ver</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* KPI 2: Meta Geral */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 flex flex-col justify-between gap-5 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] text-[#16A34A] flex items-center justify-center shrink-0">
-                <Target size={15} />
-              </div>
-              <span className="text-[13px] font-medium text-[#52525B] truncate">Meta geral atingida</span>
-            </div>
+            <span className="text-[13.5px] font-medium text-[#647082]">Meta do mês</span>
             <button
+              type="button"
               onClick={() => {
                 setNewGoalValue(monthlyGoal);
                 setShowGoalModal(true);
               }}
-              className="text-[11.5px] font-medium text-[#3795AE] hover:text-[#2B7E94] flex items-center gap-1 cursor-pointer shrink-0"
-              title="Ajustar meta mensal"
+              className="text-[13px] font-semibold text-[#3795AE] hover:text-[#2B7E94] inline-flex items-center gap-1 cursor-pointer shrink-0 py-1 px-2 -mr-2 rounded-lg hover:bg-[#3795AE]/8 transition-colors"
             >
-              <SlidersHorizontal size={12} />
-              <span>Ajustar</span>
+              <SlidersHorizontal size={14} />
+              <span>{monthlyGoal > 0 ? 'Alterar' : 'Definir'}</span>
             </button>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <div className="flex items-baseline justify-between gap-2">
-              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+              <div className="text-[28px] font-semibold text-[#14181F] tracking-[-0.025em] tabular-nums leading-none">
                 {goalPercent}%
               </div>
-              <span className="text-xs text-[#71717A] tabular-nums truncate">
-                Meta R$ {monthlyGoal.toLocaleString('pt-BR')}
+              <span className="text-[13px] text-[#647082] tabular-nums truncate">
+                {monthlyGoal > 0 ? `de R$ ${monthlyGoal.toLocaleString('pt-BR')}` : 'Meta não definida'}
               </span>
             </div>
-            <div className="w-full h-1.5 bg-[#F1F1F3] rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-[#F1F4F7] rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#3795AE] rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(goalPercent, 100)}%` }}
@@ -351,64 +406,54 @@ export default function Overview({
         </div>
 
         {/* KPI 3: Gasto com Materiais */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 flex flex-col justify-between gap-5 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#FFFBEB] text-[#D97706] flex items-center justify-center shrink-0">
-                <Package size={15} />
-              </div>
-              <span className="text-[13px] font-medium text-[#52525B] truncate">Gasto com materiais</span>
+            <span className="text-[13.5px] font-medium text-[#647082]">Gasto com materiais</span>
+            <div className="w-9 h-9 rounded-xl bg-[#FEF3C7]/70 text-[#B45309] flex items-center justify-center shrink-0">
+              <Package size={18} />
             </div>
-            {onNavigate && (
-              <button
-                onClick={() => onNavigate('compras')}
-                className="text-[#A1A1AA] hover:text-[#18181B] transition-colors cursor-pointer"
-                title="Abrir Compras"
-              >
-                <ArrowUpRight size={15} />
-              </button>
-            )}
           </div>
 
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
-                R$ {materialExpenses.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-              </div>
-              <div className="mt-2.5 text-xs text-[#71717A] tabular-nums truncate">
-                {materialExpensesCount} {materialExpensesCount === 1 ? 'lançamento' : 'lançamentos'} no período
-              </div>
+          <div className="space-y-1.5">
+            <div className="text-[28px] font-semibold text-[#14181F] tracking-[-0.025em] tabular-nums leading-none">
+              R$ {materialExpenses.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
-
-            <div className="w-16 sm:w-20 h-11 shrink-0">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expenseSpark} margin={{ top: 2, right: 0, bottom: 0, left: 0 }}>
-                  <Bar dataKey="despesas" fill="#D97706" radius={[3, 3, 0, 0]} opacity={0.75} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="flex items-center justify-between gap-2 pt-1 text-[13px] text-[#647082]">
+              <span className="tabular-nums truncate">
+                {materialExpensesCount === 0
+                  ? 'Nenhuma compra lançada'
+                  : `${materialExpensesCount} ${materialExpensesCount === 1 ? 'compra lançada' : 'compras lançadas'}`}
+              </span>
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => onNavigate('compras')}
+                  className="text-[#3795AE] hover:text-[#2B7E94] font-medium inline-flex items-center gap-0.5 cursor-pointer shrink-0"
+                >
+                  <span>Abrir</span>
+                  <ArrowUpRight size={14} />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        {/* KPI 4: Margem Líquida */}
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 hover:border-[#DCDCE0] transition-colors min-w-0">
+        {/* KPI 4: Saldo após Materiais */}
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 flex flex-col justify-between gap-5 min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
-                <TrendingUp size={15} />
-              </div>
-              <span className="text-[13px] font-medium text-[#52525B] truncate">Margem operacional</span>
+            <span className="text-[13.5px] font-medium text-[#647082]">Saldo após materiais</span>
+            <div className="w-9 h-9 rounded-xl bg-[#ECFDF5] text-[#15803D] flex items-center justify-center shrink-0">
+              <TrendingUp size={18} />
             </div>
-            <span className="text-xs font-semibold text-[#3795AE] tabular-nums shrink-0">{marginPercentage}%</span>
           </div>
 
-          <div className="space-y-2">
-            <div className="text-[22px] sm:text-[26px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums leading-none">
+          <div className="space-y-1.5">
+            <div className="text-[28px] font-semibold text-[#14181F] tracking-[-0.025em] tabular-nums leading-none">
               R$ {profitMarginVal.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </div>
-            <div className="text-xs text-[#71717A]">
-              Receitas descontando insumos clínicos
-            </div>
+            <p className="pt-1 text-[13px] text-[#647082] tabular-nums">
+              Margem atual de <strong className="text-[#14181F] font-semibold">{marginPercentage}%</strong>
+            </p>
           </div>
         </div>
       </div>
@@ -417,53 +462,54 @@ export default function Overview({
       <AnimatePresence>
         {(loadingAi || aiAdvice) && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="bg-white border border-[#3795AE]/30 rounded-2xl p-6 relative"
+            className="bg-white border border-[#3795AE]/35 rounded-2xl p-6 sm:p-7 relative"
           >
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center">
-                  <Sparkles size={16} />
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+                  <Sparkles size={18} />
                 </div>
                 <div>
-                  <h4 className="font-display font-semibold text-sm text-[#18181B]">
-                    Diagnóstico do Consultor Clínico IA
+                  <h4 className="font-display font-semibold text-base text-[#14181F]">
+                    Análise inteligente da clínica
                   </h4>
-                  <p className="text-xs text-[#71717A]">
-                    Análise baseada no faturamento, margem e metas atuais
+                  <p className="text-[13px] text-[#647082]">
+                    Resumo automático com base nos números registrados até agora
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setAiAdvice(null);
                   setLoadingAi(false);
                 }}
-                className="w-8 h-8 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-[#F4F4F6] flex items-center justify-center transition-colors cursor-pointer"
-                title="Fechar diagnóstico"
+                className="w-10 h-10 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors cursor-pointer"
+                title="Fechar análise"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
             {loadingAi ? (
-              <div className="flex items-center gap-3 py-6 justify-center text-sm text-[#52525B]">
+              <div className="flex items-center gap-3 py-8 justify-center text-sm text-[#4B5563]">
                 <Loader2 className="animate-spin text-[#3795AE]" size={20} />
-                <span>Analisando faturamento de R$ {totalRevenues.toLocaleString('pt-BR')} e metas...</span>
+                <span>Analisando os números da clínica...</span>
               </div>
             ) : (
-              <div className="space-y-4">
-                <div className="text-sm text-[#3F3F46] leading-relaxed space-y-1.5">
+              <div className="space-y-5">
+                <div className="text-sm text-[#374151] leading-relaxed space-y-2">
                   {aiAdvice?.split('\n').map((line, i) => {
                     let formatted = line;
-                    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#18181B] font-semibold">$1</strong>');
+                    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="text-[#14181F] font-semibold">$1</strong>');
                     formatted = formatted.replace(/^\*\s(.*)/g, '• $1');
                     formatted = formatted.replace(
                       /#+\s(.*)/g,
-                      '<strong class="font-display text-[#3795AE] text-sm block mt-2">$1</strong>'
+                      '<strong class="font-display text-[#3795AE] text-[15px] block mt-3">$1</strong>'
                     );
                     return (
                       <p
@@ -475,18 +521,19 @@ export default function Overview({
                   })}
                 </div>
 
-                <div className="pt-4 border-t border-[#F1F1F3] flex gap-2">
+                <div className="pt-4 border-t border-[#ECEFF3] flex flex-col sm:flex-row gap-3">
                   <input
                     type="text"
-                    placeholder="Pergunte algo específico sobre metas, custos ou equipe..."
+                    placeholder="Faça uma pergunta sobre faturamento, gastos ou metas..."
                     value={customQuery}
                     onChange={e => setCustomQuery(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && fetchAiAdvice(customQuery)}
-                    className="flex-1 bg-[#FAFAFA] border border-[#E4E4E7] rounded-xl px-3.5 py-2 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                    className="flex-1 min-h-[44px] bg-[#F7F8FA] border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:bg-white focus:border-[#3795AE]"
                   />
                   <button
+                    type="button"
                     onClick={() => fetchAiAdvice(customQuery)}
-                    className="bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold px-4 py-2 rounded-xl text-xs transition-colors cursor-pointer whitespace-nowrap"
+                    className="min-h-[44px] bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors cursor-pointer whitespace-nowrap"
                   >
                     Perguntar
                   </button>
@@ -497,196 +544,206 @@ export default function Overview({
         )}
       </AnimatePresence>
 
-      {/* ROW 2: ASYMMETRIC 2-COLUMN SPLIT (2/3 CHART + 1/3 DOCTOR RANKING) */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-5 items-stretch min-w-0">
-        {/* Left 2/3: Clean Traditional Financial Evolution Chart */}
-        <section className="xl:col-span-8 bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
-            <div>
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <h2 className="font-display font-semibold text-[15px] text-[#18181B]">
-                  Evolução financeira
-                </h2>
-                <span className="text-xs text-[#71717A]">
-                  · Meta atingida <strong className="text-[#3795AE] font-semibold tabular-nums">{goalPercent}%</strong>
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2.5 mt-2">
-                <span className="text-2xl sm:text-[28px] font-semibold text-[#18181B] tracking-[-0.025em] tabular-nums">
-                  R$ {totalRevenues.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-                </span>
-                <span className="text-xs font-medium text-[#16A34A] tabular-nums">
-                  Margem de {marginPercentage}%
-                </span>
-              </div>
+      {/* ROW 2: 2-COLUMN SPLIT (CHART + DOCTOR RANKING) */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-stretch min-w-0">
+        {/* Left 2/3: Clean Financial Evolution Chart */}
+        <section className="xl:col-span-8 bg-white border border-[#E6EAF0] rounded-2xl p-6 sm:p-7 flex flex-col justify-between min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+            <div className="space-y-1">
+              <h2 className="font-display font-semibold text-[17px] text-[#14181F]">
+                Entradas e saídas do período
+              </h2>
+              <p className="text-[13px] text-[#647082]">
+                Acompanhe a evolução diária ou compare por tipo de atendimento
+              </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2.5 flex-wrap">
               {/* Segmented Chart Switcher */}
-              <div className="inline-flex bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium text-[#71717A]">
+              <div className="inline-flex bg-[#F1F4F7] p-1 rounded-xl text-[13px] font-medium text-[#647082]">
                 <button
+                  type="button"
                   onClick={() => setChartView('evolucao')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     chartView === 'evolucao'
-                      ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                      : 'hover:text-[#18181B]'
+                      ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                      : 'hover:text-[#14181F]'
                   }`}
                 >
-                  Evolução
+                  Por dia
                 </button>
                 <button
+                  type="button"
                   onClick={() => setChartView('categorias')}
-                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
                     chartView === 'categorias'
-                      ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                      : 'hover:text-[#18181B]'
+                      ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                      : 'hover:text-[#14181F]'
                   }`}
                 >
-                  Categorias
+                  Por categoria
                 </button>
               </div>
 
               {/* Clean Subtle AI Diagnostic Action */}
               <button
+                type="button"
                 onClick={() => fetchAiAdvice()}
-                className="flex items-center gap-1.5 bg-white border border-[#E4E4E7] hover:border-[#3795AE]/40 hover:bg-[#3795AE]/5 text-[#3F3F46] hover:text-[#3795AE] px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                className="min-h-[40px] flex items-center gap-2 bg-white border border-[#DCE2EA] hover:border-[#3795AE] hover:text-[#3795AE] text-[#374151] px-3.5 py-2 rounded-xl text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap"
               >
-                <Sparkles size={14} className="text-[#3795AE]" />
-                <span>Diagnóstico IA</span>
+                <Sparkles size={15} className="text-[#3795AE]" />
+                <span>Resumo IA</span>
               </button>
             </div>
           </div>
 
-          {/* Legend Strip */}
-          {chartView === 'evolucao' && (
-            <div className="flex items-center gap-5 mb-3 text-xs text-[#71717A]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#3795AE]" />
-                <span>Receitas</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#E11D48]/70" />
-                <span>Despesas</span>
-              </div>
+          {transactions.length === 0 ? (
+            <div className="py-16 px-4 text-center space-y-3">
+              <p className="text-sm font-medium text-[#374151]">
+                O gráfico aparecerá automaticamente quando você registrar seus primeiros lançamentos.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(true)}
+                className="inline-flex items-center gap-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+              >
+                <Plus size={16} />
+                <span>Adicionar primeiro lançamento</span>
+              </button>
             </div>
-          )}
-
-          {/* Clean Traditional Recharts Container */}
-          <div className="h-[220px] sm:h-[250px] w-full min-w-0 overflow-hidden">
-            <ResponsiveContainer width="100%" height="100%">
-              {chartView === 'evolucao' ? (
-                <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revFillMinimal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3795AE" stopOpacity={0.18} />
-                      <stop offset="100%" stopColor="#3795AE" stopOpacity={0.01} />
-                    </linearGradient>
-                    <linearGradient id="expFillMinimal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#E11D48" stopOpacity={0.12} />
-                      <stop offset="100%" stopColor="#E11D48" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F1F3" />
-                  <XAxis
-                    dataKey="label"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#A1A1AA' }}
-                    dy={8}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#A1A1AA' }}
-                    tickFormatter={v => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderColor: '#EBEBED',
-                      borderRadius: '12px',
-                      boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
-                      fontSize: '12px'
-                    }}
-                    formatter={(val: any, name: string) => [
-                      `R$ ${Number(val).toLocaleString('pt-BR')}`,
-                      name === 'receitas' ? 'Receitas' : 'Despesas'
-                    ]}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="receitas"
-                    stroke="#3795AE"
-                    strokeWidth={2}
-                    fill="url(#revFillMinimal)"
-                    activeDot={{ r: 4, fill: '#3795AE', stroke: '#FFFFFF', strokeWidth: 2 }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="despesas"
-                    stroke="#E11D48"
-                    strokeWidth={1.75}
-                    strokeOpacity={0.75}
-                    fill="url(#expFillMinimal)"
-                    activeDot={{ r: 4, fill: '#E11D48', stroke: '#FFFFFF', strokeWidth: 2 }}
-                  />
-                </AreaChart>
-              ) : (
-                <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }} barSize={36}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F1F3" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#71717A' }}
-                    dy={8}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: '#A1A1AA' }}
-                    tickFormatter={v => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)}
-                  />
-                  <Tooltip
-                    cursor={{ fill: '#F7F7F8' }}
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderColor: '#EBEBED',
-                      borderRadius: '12px',
-                      boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
-                      fontSize: '12px'
-                    }}
-                    formatter={(val: any) => [`R$ ${Number(val).toLocaleString('pt-BR')}`, 'Total']}
-                  />
-                  <Bar dataKey="total" fill="#3795AE" radius={[6, 6, 0, 0]} />
-                </BarChart>
+          ) : (
+            <>
+              {chartView === 'evolucao' && (
+                <div className="flex items-center gap-6 mb-4 text-[13px] text-[#647082]">
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm bg-[#3795AE]" />
+                    <span>Entradas (receitas)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-sm bg-[#DC2626]/75" />
+                    <span>Saídas (despesas)</span>
+                  </div>
+                </div>
               )}
-            </ResponsiveContainer>
-          </div>
+
+              <div className="h-[240px] sm:h-[270px] w-full min-w-0 overflow-hidden">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartView === 'evolucao' ? (
+                    <AreaChart data={timelineData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="revFillMinimal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3795AE" stopOpacity={0.18} />
+                          <stop offset="100%" stopColor="#3795AE" stopOpacity={0.01} />
+                        </linearGradient>
+                        <linearGradient id="expFillMinimal" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#DC2626" stopOpacity={0.12} />
+                          <stop offset="100%" stopColor="#DC2626" stopOpacity={0.01} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ECEFF3" />
+                      <XAxis
+                        dataKey="label"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#647082' }}
+                        dy={8}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#647082' }}
+                        tickFormatter={v => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#FFFFFF',
+                          borderColor: '#E6EAF0',
+                          borderRadius: '6px',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                          fontSize: '13px'
+                        }}
+                        formatter={(val: any, name: string) => [
+                          `R$ ${Number(val).toLocaleString('pt-BR')}`,
+                          name === 'receitas' ? 'Entradas' : 'Saídas'
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="receitas"
+                        stroke="#3795AE"
+                        strokeWidth={2.2}
+                        fill="url(#revFillMinimal)"
+                        activeDot={{ r: 5, fill: '#3795AE', stroke: '#FFFFFF', strokeWidth: 2 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="despesas"
+                        stroke="#DC2626"
+                        strokeWidth={1.8}
+                        strokeOpacity={0.75}
+                        fill="url(#expFillMinimal)"
+                        activeDot={{ r: 5, fill: '#DC2626', stroke: '#FFFFFF', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={categoryChartData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }} barSize={42}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ECEFF3" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#647082' }}
+                        dy={8}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#647082' }}
+                        tickFormatter={v => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`)}
+                      />
+                      <Tooltip
+                        cursor={{ fill: '#F7F8FA' }}
+                        contentStyle={{
+                          backgroundColor: '#FFFFFF',
+                          borderColor: '#E6EAF0',
+                          borderRadius: '6px',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+                          fontSize: '13px'
+                        }}
+                        formatter={(val: any) => [`R$ ${Number(val).toLocaleString('pt-BR')}`, 'Total']}
+                      />
+                      <Bar dataKey="total" fill="#3795AE" radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
         </section>
 
-        {/* Right 1/3: Doctor Ranking + 3-Metric Footer */}
-        <section className="xl:col-span-4 bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-6 flex flex-col justify-between min-w-0">
+        {/* Right 1/3: Doctor Ranking */}
+        <section className="xl:col-span-4 bg-white border border-[#E6EAF0] rounded-2xl p-6 sm:p-7 flex flex-col justify-between min-w-0">
           <div>
-            <div className="flex items-center justify-between gap-2 mb-5">
+            <div className="flex items-start justify-between gap-3 mb-6">
               <div>
-                <h2 className="font-display font-semibold text-[15px] text-[#18181B]">
-                  Ranking das dentistas
+                <h2 className="font-display font-semibold text-[17px] text-[#14181F]">
+                  Produção das dentistas
                 </h2>
-                <p className="text-xs text-[#71717A] mt-0.5">Progresso frente às metas mensais</p>
+                <p className="text-[13px] text-[#647082] mt-0.5">Progresso em relação às metas</p>
               </div>
               {onNavigate && (
                 <button
+                  type="button"
                   onClick={() => onNavigate('doutora')}
-                  className="w-8 h-8 rounded-lg border border-[#EBEBED] text-[#71717A] hover:text-[#18181B] hover:bg-[#FAFAFA] flex items-center justify-center transition-colors cursor-pointer"
-                  title="Ver todas as dentistas"
+                  className="text-[13px] font-semibold text-[#3795AE] hover:text-[#2B7E94] inline-flex items-center gap-1 cursor-pointer shrink-0 py-1"
                 >
+                  <span>Abrir</span>
                   <ArrowUpRight size={15} />
                 </button>
               )}
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {doctorRevenues.map((doctor, index) => {
                 const progress = Math.min(doctor.percentage, 100);
                 const isLow = doctor.percentage < 70;
@@ -694,37 +751,37 @@ export default function Overview({
                 return (
                   <div key={doctor.id} className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 tabular-nums ${
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-semibold shrink-0 tabular-nums ${
                             index === 0
                               ? 'bg-[#3795AE]/12 text-[#3795AE]'
-                              : 'bg-[#F4F4F6] text-[#71717A]'
+                              : 'bg-[#F1F4F7] text-[#647082]'
                           }`}
                         >
-                          {index + 1}
+                          {index + 1}º
                         </div>
                         <div className="min-w-0">
-                          <h4 className="text-[13px] font-semibold text-[#18181B] truncate">
+                          <h4 className="text-sm font-semibold text-[#14181F] truncate">
                             {doctor.name}
                           </h4>
-                          <p className="text-[11.5px] text-[#71717A] tabular-nums">
-                            R$ {doctor.currentEarnings.toLocaleString('pt-BR')} / R${' '}
+                          <p className="text-xs text-[#647082] tabular-nums">
+                            R$ {doctor.currentEarnings.toLocaleString('pt-BR')} de R${' '}
                             {doctor.monthlyTarget.toLocaleString('pt-BR')}
                           </p>
                         </div>
                       </div>
 
                       <span
-                        className={`text-xs font-semibold tabular-nums shrink-0 ${
-                          isLow ? 'text-[#D97706]' : 'text-[#16A34A]'
+                        className={`text-sm font-semibold tabular-nums shrink-0 ${
+                          isLow ? 'text-[#B45309]' : 'text-[#15803D]'
                         }`}
                       >
                         {doctor.percentage}%
                       </span>
                     </div>
 
-                    <div className="w-full h-1.5 bg-[#F1F1F3] rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-[#F1F4F7] rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           isLow ? 'bg-[#D97706]/80' : 'bg-[#3795AE]'
@@ -737,68 +794,86 @@ export default function Overview({
               })}
 
               {doctorRevenues.length === 0 && (
-                <p className="text-xs text-[#71717A] py-6 text-center">
-                  Nenhuma dentista cadastrada ainda.
-                </p>
+                <div className="py-8 text-center space-y-3">
+                  <Stethoscope size={28} className="mx-auto text-[#CBD5E1]" />
+                  <p className="text-sm text-[#647082]">
+                    Nenhuma dentista cadastrada ainda.
+                  </p>
+                  {onNavigate && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigate('doutora')}
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#3795AE] hover:text-[#2B7E94] cursor-pointer"
+                    >
+                      <span>Cadastrar primeira dentista</span>
+                      <ArrowRight size={15} />
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
 
-          {/* 3-Column Summary Footer (Mirrors Reference Bottom Dividers) */}
-          <div className="grid grid-cols-3 divide-x divide-[#F1F1F3] border-t border-[#F1F1F3] pt-4 mt-6">
-            <div className="pr-2 min-w-0">
-              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">{doctors.length}</p>
-              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Dentistas</p>
+          {/* 3-Column Quiet Summary Footer */}
+          <div className="grid grid-cols-3 divide-x divide-[#ECEFF3] border-t border-[#ECEFF3] pt-5 mt-6">
+            <div className="pr-3 min-w-0">
+              <p className="text-base font-semibold text-[#14181F] tabular-nums truncate">{doctors.length}</p>
+              <p className="text-xs text-[#647082] mt-0.5 truncate">Dentistas</p>
             </div>
-            <div className="px-2 sm:px-3 min-w-0">
-              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">
+            <div className="px-3 min-w-0">
+              <p className="text-base font-semibold text-[#14181F] tabular-nums truncate">
                 R$ {avgTicket.toLocaleString('pt-BR')}
               </p>
-              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Ticket médio</p>
+              <p className="text-xs text-[#647082] mt-0.5 truncate">Valor médio</p>
             </div>
-            <div className="pl-2 sm:pl-3 min-w-0">
-              <p className="text-sm sm:text-[15px] font-semibold text-[#18181B] tabular-nums truncate">{avgConversion}%</p>
-              <p className="text-[11px] text-[#71717A] mt-0.5 truncate">Conversão</p>
+            <div className="pl-3 min-w-0">
+              <p className="text-base font-semibold text-[#14181F] tabular-nums truncate">{avgConversion}%</p>
+              <p className="text-xs text-[#647082] mt-0.5 truncate">Conversão</p>
             </div>
           </div>
         </section>
       </div>
 
       {/* ROW 3: RECENT TRANSACTIONS TABLE CARD */}
-      <section className="bg-white border border-[#EBEBED] rounded-2xl overflow-hidden min-w-0">
-        <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#F1F1F3]">
+      <section className="bg-white border border-[#E6EAF0] rounded-2xl overflow-hidden min-w-0">
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#ECEFF3]">
           <div>
-            <h2 className="font-display font-semibold text-[15px] text-[#18181B]">
-              Lançamentos recentes
+            <h2 className="font-display font-semibold text-[17px] text-[#14181F]">
+              Últimos lançamentos
             </h2>
+            <p className="text-[13px] text-[#647082] mt-0.5">
+              Veja rapidamente as entradas e saídas mais recentes
+            </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-            <div className="relative flex-1 min-w-[160px] sm:flex-initial">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A1A1AA]" />
+          <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+            <div className="relative flex-1 min-w-[180px] sm:flex-initial">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A0B2]" />
               <input
                 type="text"
-                placeholder="Buscar..."
+                placeholder="Pesquisar lançamento..."
                 value={recentSearch}
                 onChange={e => setRecentSearch(e.target.value)}
-                className="w-full sm:w-56 bg-[#FAFAFA] border border-[#E4E4E7] rounded-xl pl-8 pr-3 py-1.5 text-xs text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                className="w-full sm:w-60 min-h-[42px] bg-[#F7F8FA] border border-[#DCE2EA] rounded-xl pl-10 pr-3.5 py-2 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:bg-white focus:border-[#3795AE]"
               />
             </div>
 
             <button
+              type="button"
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+              className="min-h-[42px] flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-4 py-2 rounded-xl text-[13.5px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
             >
-              <Plus size={14} />
+              <Plus size={16} />
               <span>Adicionar</span>
             </button>
 
             {onNavigate && (
               <button
+                type="button"
                 onClick={() => onNavigate('historico')}
-                className="px-3 py-1.5 rounded-xl border border-[#E4E4E7] bg-white hover:bg-[#FAFAFA] text-xs font-medium text-[#52525B] hover:text-[#18181B] transition-colors cursor-pointer whitespace-nowrap"
+                className="min-h-[42px] px-4 py-2 rounded-xl border border-[#DCE2EA] bg-white hover:bg-[#F7F8FA] text-[13.5px] font-medium text-[#374151] transition-colors cursor-pointer whitespace-nowrap"
               >
-                Ver tudo
+                Ver todos
               </button>
             )}
           </div>
@@ -807,50 +882,50 @@ export default function Overview({
         <div className="w-full overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#F8F8FA] border-b border-[#F1F1F3] text-[12px] font-medium text-[#71717A]">
-                <th className="py-3 px-5 sm:px-6 font-medium">Data</th>
-                <th className="py-3 px-4 font-medium">Responsável</th>
-                <th className="py-3 px-4 font-medium">Descrição</th>
-                <th className="py-3 px-4 font-medium">Categoria</th>
-                <th className="py-3 px-4 font-medium text-right">Valor</th>
-                <th className="py-3 px-5 sm:px-6 font-medium text-right">Tipo</th>
+              <tr className="bg-[#F8FAFC] border-b border-[#ECEFF3] text-[13px] font-medium text-[#647082]">
+                <th className="py-3.5 px-6 font-medium">Data</th>
+                <th className="py-3.5 px-4 font-medium">Responsável</th>
+                <th className="py-3.5 px-4 font-medium">Descrição</th>
+                <th className="py-3.5 px-4 font-medium">Categoria</th>
+                <th className="py-3.5 px-4 font-medium text-right">Valor</th>
+                <th className="py-3.5 px-6 font-medium text-right">Tipo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F1F1F3] text-[13px]">
+            <tbody className="divide-y divide-[#ECEFF3] text-sm">
               {recentTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-10 text-center text-xs text-[#71717A]">
-                    Nenhum lançamento encontrado com esse filtro.
+                  <td colSpan={6} className="py-12 text-center text-sm text-[#647082]">
+                    {transactions.length === 0
+                      ? 'Nenhum lançamento registrado ainda. Clique em "Adicionar" para começar.'
+                      : 'Nenhum lançamento encontrado para essa pesquisa.'}
                   </td>
                 </tr>
               ) : (
                 recentTransactions.map(t => (
-                  <tr key={t.id} className="hover:bg-[#FAFAFA] transition-colors">
-                    <td className="py-3.5 px-5 sm:px-6 text-[#71717A] tabular-nums whitespace-nowrap">
+                  <tr key={t.id} className="hover:bg-[#F8FAFC] transition-colors">
+                    <td className="py-4 px-6 text-[#647082] tabular-nums whitespace-nowrap">
                       {formatDateBR(t.date)}
                     </td>
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-[#F4F4F6] text-[#52525B] text-[11px] font-semibold flex items-center justify-center shrink-0">
+                    <td className="py-4 px-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#F1F4F7] text-[#4B5563] text-xs font-semibold flex items-center justify-center shrink-0">
                           {getInitials(t.doctorName)}
                         </div>
-                        <span className="font-medium text-[#18181B]">{t.doctorName}</span>
+                        <span className="font-medium text-[#14181F]">{t.doctorName}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-[#3F3F46] max-w-[260px] truncate">{t.description}</td>
-                    <td className="py-3.5 px-4 text-[#71717A] whitespace-nowrap">{t.category}</td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-[#18181B] tabular-nums whitespace-nowrap">
+                    <td className="py-4 px-4 text-[#374151] max-w-[280px] truncate">{t.description}</td>
+                    <td className="py-4 px-4 text-[#647082] whitespace-nowrap">{t.category}</td>
+                    <td className="py-4 px-4 text-right font-semibold text-[#14181F] tabular-nums whitespace-nowrap">
                       {t.type === 'despesa' ? '− ' : ''}R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="py-3.5 px-5 sm:px-6 text-right whitespace-nowrap">
+                    <td className="py-4 px-6 text-right whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[11.5px] font-medium ${
-                          t.type === 'receita'
-                            ? 'bg-[#ECFDF5] text-[#16A34A]'
-                            : 'bg-[#FEF2F2] text-[#DC2626]'
+                        className={`text-[13px] font-semibold ${
+                          t.type === 'receita' ? 'text-[#15803D]' : 'text-[#DC2626]'
                         }`}
                       >
-                        {t.type === 'receita' ? 'Receita' : 'Despesa'}
+                        {t.type === 'receita' ? 'Entrada' : 'Saída'}
                       </span>
                     </td>
                   </tr>
@@ -863,43 +938,46 @@ export default function Overview({
 
       {/* MODAL 1: ADD TRANSACTION */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#14181F]/35 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ scale: 0.97, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.15 }}
-            className="bg-white rounded-2xl border border-[#EBEBED] w-full max-w-md p-6 shadow-xl"
+            className="bg-white rounded-3xl border border-[#E6EAF0] w-full max-w-md p-6 sm:p-7 shadow-xl"
           >
-            <div className="flex justify-between items-center mb-5">
+            <div className="flex justify-between items-start gap-3 mb-6">
               <div>
-                <h3 className="font-display font-semibold text-base text-[#18181B]">Novo lançamento</h3>
-                <p className="text-xs text-[#71717A] mt-0.5">Registre uma receita clínica ou despesa de material</p>
+                <h3 className="font-display font-semibold text-lg text-[#14181F]">Novo lançamento</h3>
+                <p className="text-[13px] text-[#647082] mt-0.5">
+                  Registre uma entrada de atendimento ou uma compra de material
+                </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-8 h-8 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-[#F4F4F6] flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">Tipo</label>
-                <div className="grid grid-cols-2 gap-1 bg-[#F4F4F6] p-1 rounded-xl">
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Tipo de lançamento</label>
+                <div className="grid grid-cols-2 gap-1.5 bg-[#F1F4F7] p-1.5 rounded-xl">
                   <button
                     type="button"
                     onClick={() => {
                       setType('receita');
                       setCategory('Procedimentos');
                     }}
-                    className={`py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    className={`py-2.5 rounded-lg text-[13.5px] font-semibold transition-all cursor-pointer ${
                       type === 'receita'
-                        ? 'bg-white text-[#3795AE] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                        : 'text-[#71717A] hover:text-[#18181B]'
+                        ? 'bg-white text-[#1F6F85] shadow-xs'
+                        : 'text-[#647082] hover:text-[#14181F]'
                     }`}
                   >
-                    Receita (Faturamento)
+                    Entrada (Receita)
                   </button>
                   <button
                     type="button"
@@ -907,50 +985,50 @@ export default function Overview({
                       setType('despesa');
                       setCategory('Materiais');
                     }}
-                    className={`py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    className={`py-2.5 rounded-lg text-[13.5px] font-semibold transition-all cursor-pointer ${
                       type === 'despesa'
-                        ? 'bg-white text-[#DC2626] shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                        : 'text-[#71717A] hover:text-[#18181B]'
+                        ? 'bg-white text-[#DC2626] shadow-xs'
+                        : 'text-[#647082] hover:text-[#14181F]'
                     }`}
                   >
-                    Despesa (Material)
+                    Saída (Despesa)
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">Descrição</label>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">O que foi feito ou comprado?</label>
                 <input
                   type="text"
                   required
-                  placeholder={type === 'receita' ? 'Ex: Restauração estética em resina' : 'Ex: Luvas de procedimento nitrílicas'}
+                  placeholder={type === 'receita' ? 'Ex: Limpeza, Restauração, Clareamento' : 'Ex: Luvas, Resina, Anestésico'}
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-medium text-[#52525B] mb-1.5">Valor (R$)</label>
+                  <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Valor (R$)</label>
                   <input
                     type="number"
                     required
-                    min="1"
+                    min="0.01"
                     step="0.01"
-                    placeholder="850"
+                    placeholder="0,00"
                     value={value}
                     onChange={e => setValue(e.target.value)}
-                    className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] tabular-nums focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                    className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] tabular-nums focus:outline-none focus:border-[#3795AE]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#52525B] mb-1.5">Categoria</label>
+                  <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Categoria</label>
                   <select
                     value={category}
                     onChange={e => setCategory(e.target.value as any)}
-                    className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3 py-2.5 text-sm text-[#18181B] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                    className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
                   >
                     {type === 'receita' ? (
                       <>
@@ -966,12 +1044,13 @@ export default function Overview({
 
               {type === 'receita' && (
                 <div>
-                  <label className="block text-xs font-medium text-[#52525B] mb-1.5">Dentista responsável</label>
+                  <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Dentista responsável</label>
                   <select
                     value={doctorName}
                     onChange={e => setDoctorName(e.target.value)}
-                    className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3 py-2.5 text-sm text-[#18181B] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                    className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
                   >
+                    {doctors.length === 0 && <option value="Clínica">Clínica (geral)</option>}
                     {doctors.map(d => (
                       <option key={d.id} value={d.name}>
                         {d.name}
@@ -981,19 +1060,19 @@ export default function Overview({
                 </div>
               )}
 
-              <div className="pt-2 flex gap-2.5">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-semibold text-[#52525B] hover:bg-[#FAFAFA] transition-colors cursor-pointer"
+                  className="flex-1 min-h-[46px] py-2.5 rounded-xl border border-[#DCE2EA] text-sm font-medium text-[#4B5563] hover:bg-[#F7F8FA] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex-1 min-h-[46px] py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold transition-colors cursor-pointer"
                 >
-                  Confirmar lançamento
+                  Salvar lançamento
                 </button>
               </div>
             </form>
@@ -1003,50 +1082,55 @@ export default function Overview({
 
       {/* MODAL 2: ADJUST MONTHLY GOAL */}
       {showGoalModal && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-[#14181F]/35 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ scale: 0.97, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.15 }}
-            className="bg-white rounded-2xl border border-[#EBEBED] w-full max-w-sm p-6 shadow-xl"
+            className="bg-white rounded-3xl border border-[#E6EAF0] w-full max-w-sm p-6 sm:p-7 shadow-xl"
           >
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-display font-semibold text-base text-[#18181B]">Ajustar meta mensal</h3>
+            <div className="flex justify-between items-start gap-3 mb-5">
+              <div>
+                <h3 className="font-display font-semibold text-lg text-[#14181F]">Meta de faturamento do mês</h3>
+                <p className="text-[13px] text-[#647082] mt-0.5">
+                  Quanto a clínica pretende faturar neste mês?
+                </p>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowGoalModal(false)}
-                className="w-8 h-8 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-[#F4F4F6] flex items-center justify-center transition-colors cursor-pointer"
+                className="w-9 h-9 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors cursor-pointer"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleGoalSubmit} className="space-y-4">
+            <form onSubmit={handleGoalSubmit} className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-[#52525B] mb-1.5">
-                  Meta geral da clínica (R$)
-                </label>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Valor da meta (R$)</label>
                 <input
                   type="number"
                   required
-                  min="5000"
-                  step="1000"
+                  min="0"
+                  step="500"
+                  placeholder="Ex: 50000"
                   value={newGoalValue}
-                  onChange={e => setNewGoalValue(parseInt(e.target.value) || 0)}
-                  className="w-full bg-white border border-[#E4E4E7] rounded-xl px-3.5 py-2.5 text-sm text-[#18181B] tabular-nums focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+                  onChange={e => setNewGoalValue(Number(e.target.value))}
+                  className="w-full min-h-[48px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-base font-semibold text-[#14181F] tabular-nums focus:outline-none focus:border-[#3795AE]"
                 />
               </div>
 
-              <div className="flex gap-2.5 pt-1">
+              <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={() => setShowGoalModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#E4E4E7] text-xs font-semibold text-[#52525B] hover:bg-[#FAFAFA] transition-colors cursor-pointer"
+                  className="flex-1 min-h-[46px] py-2.5 rounded-xl border border-[#DCE2EA] text-sm font-medium text-[#4B5563] hover:bg-[#F7F8FA] transition-colors cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold transition-colors cursor-pointer"
+                  className="flex-1 min-h-[46px] py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold transition-colors cursor-pointer"
                 >
                   Salvar meta
                 </button>

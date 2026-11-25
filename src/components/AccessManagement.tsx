@@ -40,19 +40,19 @@ interface AccessManagementProps {
 
 const ROLE_STYLES: Record<UserRole, { badge: string; dot: string; desc: string }> = {
   gestao: {
-    badge: 'bg-[#3795AE]/10 text-[#2B7E94] border-[#3795AE]/20',
+    badge: 'bg-[#3795AE]/10 text-[#1F6F85] border-[#3795AE]/20',
     dot: 'bg-[#3795AE]',
-    desc: 'Acesso total: Visão Geral, Financeiro, Dentistas, Metas & Equipe, Compras, Operações, Histórico e Controle de Acessos.'
+    desc: 'Vê tudo na clínica: início, financeiro, dentistas, metas, estoque, limpeza, laboratório, documentos e acessos.'
   },
   dentista: {
     badge: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]',
     dot: 'bg-[#10B981]',
-    desc: 'Acesso clínico: próprio desempenho e metas (quando vinculado), Escala dos Consultórios, Sanitização, Laboratório e Utilitários.'
+    desc: 'Vê seu próprio desempenho e metas, a escala dos consultórios, limpeza, laboratório e documentos.'
   },
   funcionario: {
-    badge: 'bg-[#F4F4F6] text-[#3F3F46] border-[#E4E4E7]',
-    dot: 'bg-[#71717A]',
-    desc: 'Acesso operacional: Compras e Estoque, Escala dos Consultórios, Sanitização, Laboratório e Utilitários. Sem acesso financeiro.'
+    badge: 'bg-[#F1F4F7] text-[#374151] border-[#D9E0E8]',
+    dot: 'bg-[#647082]',
+    desc: 'Vê apenas o dia a dia: estoque e compras, escala dos consultórios, limpeza, laboratório e documentos. Não vê o financeiro.'
   }
 };
 
@@ -243,42 +243,42 @@ export default function AccessManagement({
           return (
             <div
               key={card.role}
-              className="bg-white border border-[#EBEBED] rounded-2xl p-5 flex flex-col justify-between gap-3"
+              className="bg-white border border-[#E6EAF0] rounded-2xl p-6 flex flex-col justify-between gap-3.5"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[#F4F4F6] text-[#3795AE] flex items-center justify-center shrink-0">
-                    <Icon size={17} />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#F1F4F7] text-[#3795AE] flex items-center justify-center shrink-0">
+                    <Icon size={18} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-[#18181B]">{card.title}</h3>
-                    <p className="text-[11px] text-[#71717A] tabular-nums">
+                    <h3 className="text-base font-semibold text-[#14181F]">{card.title}</h3>
+                    <p className="text-xs text-[#647082] tabular-nums">
                       {count} {count === 1 ? 'ativo' : 'ativos'}
                     </p>
                   </div>
                 </div>
                 <span
-                  className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${ROLE_STYLES[card.role].badge}`}
+                  className={`px-2.5 py-1 rounded-lg border text-xs font-semibold ${ROLE_STYLES[card.role].badge}`}
                 >
                   {card.title}
                 </span>
               </div>
-              <p className="text-xs text-[#52525B] leading-relaxed">{ROLE_STYLES[card.role].desc}</p>
+              <p className="text-sm text-[#4B5563] leading-relaxed">{ROLE_STYLES[card.role].desc}</p>
             </div>
           );
         })}
       </div>
 
       {/* Section 1: Pre-Authorize Google Email */}
-      <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 sm:p-6 space-y-5">
+      <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <h2 className="font-display font-semibold text-base text-[#18181B] flex items-center gap-2">
-              <UserPlus size={17} className="text-[#3795AE]" />
-              <span>Pré-autorizar acesso por e-mail Google</span>
+            <h2 className="font-display font-semibold text-base text-[#14181F] flex items-center gap-2">
+              <UserPlus size={18} className="text-[#3795AE]" />
+              <span>Liberar acesso para alguém da equipe</span>
             </h2>
-            <p className="text-xs text-[#71717A] mt-0.5">
-              Defina o perfil antes do primeiro login. Quando a pessoa entrar com o Google, receberá essas permissões automaticamente.
+            <p className="text-sm text-[#647082] mt-1">
+              Informe o e-mail Google da pessoa e o perfil dela. Assim que ela entrar pela primeira vez, já terá as permissões certas.
             </p>
           </div>
         </div>
@@ -344,14 +344,14 @@ export default function AccessManagement({
             <button
               type="submit"
               disabled={submittingInvite}
-              className="w-full py-2.5 px-4 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] disabled:opacity-60 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[42px]"
+              className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] disabled:opacity-60 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               {submittingInvite ? (
-                <Loader2 size={15} className="animate-spin" />
+                <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  <Check size={15} />
-                  <span>Autorizar</span>
+                  <Check size={16} />
+                  <span>Liberar acesso</span>
                 </>
               )}
             </button>
@@ -409,24 +409,24 @@ export default function AccessManagement({
       </div>
 
       {/* Section 2: Registered Clinic Users */}
-      <div className="bg-white border border-[#EBEBED] rounded-2xl p-5 sm:p-6 space-y-5">
+      <div className="bg-white border border-[#E6EAF0] rounded-2xl p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="font-display font-semibold text-base text-[#18181B] flex items-center gap-2">
-              <ShieldCheck size={17} className="text-[#3795AE]" />
-              <span>Usuários cadastrados na clínica</span>
+            <h2 className="font-display font-semibold text-base text-[#14181F] flex items-center gap-2">
+              <ShieldCheck size={18} className="text-[#3795AE]" />
+              <span>Pessoas com acesso à clínica</span>
             </h2>
-            <p className="text-xs text-[#71717A] mt-0.5">
-              Altere o perfil entre Gestão, Dentista e Funcionário ou desative acessos a qualquer momento.
+            <p className="text-sm text-[#647082] mt-1">
+              Troque o perfil entre Gestão, Dentista e Funcionário ou desative o acesso quando precisar.
             </p>
           </div>
           <button
             type="button"
             onClick={fetchAccessData}
             disabled={loading}
-            className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#EBEBED] hover:border-[#D4D4D8] bg-white text-xs font-medium text-[#52525B] hover:text-[#18181B] transition-colors cursor-pointer"
+            className="self-start sm:self-auto min-h-[42px] inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#D9E0E8] hover:bg-[#F7F9FB] bg-white text-sm font-medium text-[#374151] transition-colors cursor-pointer"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             <span>Atualizar lista</span>
           </button>
         </div>

@@ -17,15 +17,8 @@ import Utilities from './components/Utilities';
 import Financial from './components/Financial';
 import AccessManagement from './components/AccessManagement';
 
-import {
-  INITIAL_DOCTORS,
-  INITIAL_TRANSACTIONS,
-  INITIAL_SUPPLY_ITEMS,
-  INITIAL_TEAM_GOALS,
-  INITIAL_TEAM_MEMBERS
-} from './data';
 import { Transaction, Doctor, SupplyItem, TeamGoal, TeamMember } from './types';
-import { Calendar, Bell, Lock, Menu, Plus, ArrowRight, Loader2, Ban, LogOut } from 'lucide-react';
+import { Bell, Lock, Menu, Plus, ArrowRight, Loader2, Ban, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   auth,
@@ -40,14 +33,43 @@ import {
   updateDoctorProgressAsDentista,
   deleteClinicDoc,
   upsertClinicMonthlyGoal,
-  seedInitialClinicData,
-  clearAndSeedClinicData,
+  clearAllClinicData,
   DEFAULT_CLINIC_ID,
   ROLE_LABELS,
   User,
   UserProfile,
   UserRole
 } from './lib/firebase';
+
+const CLINIC_LOCAL_STORAGE_KEYS = [
+  'clinica_sanitizacao_checks',
+  'clinica_sanitizacao_logs',
+  'clinica_lab_procedures',
+  'sejamais_escala_consultorios',
+  'clinica_caixa_closures',
+  'clinica_gamification_v3'
+];
+
+const LOCAL_CLEAN_SLATE_KEY = 'sejamais_clean_slate_v1';
+
+function clearLocalClinicStorage() {
+  try {
+    CLINIC_LOCAL_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+  } catch (e) {
+    console.error('[Storage] Erro ao limpar dados locais:', e);
+  }
+}
+
+function ensureLocalCleanSlateOnce() {
+  try {
+    if (!localStorage.getItem(LOCAL_CLEAN_SLATE_KEY)) {
+      clearLocalClinicStorage();
+      localStorage.setItem(LOCAL_CLEAN_SLATE_KEY, '1');
+    }
+  } catch (e) {
+    console.error('[Storage] Erro ao inicializar limpeza local:', e);
+  }
+}
 
 function getDefaultTabForRole(role: UserRole): string {
   if (role === 'gestao') return 'visao-geral';
@@ -145,17 +167,22 @@ export default function App() {
   const [authRedirectError, setAuthRedirectError] = useState('');
   const [dataLoading, setDataLoading] = useState(false);
 
+  // Ensure any previously cached fictional localStorage data is wiped once before child views mount
+  const [workspaceResetKey, setWorkspaceResetKey] = useState(() => {
+    ensureLocalCleanSlateOnce();
+    return 0;
+  });
+
   // Core stateful database synchronized with shared clinic Firestore collections
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [supplies, setSupplies] = useState<SupplyItem[]>([]);
   const [goals, setGoals] = useState<TeamGoal[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [monthlyGoal, setMonthlyGoalState] = useState(50000);
+  const [monthlyGoal, setMonthlyGoalState] = useState(0);
 
   // Dynamic live date
   const [currentLiveDate, setCurrentLiveDate] = useState('');
-  const [shortLiveDate, setShortLiveDate] = useState('');
   useEffect(() => {
     const now = new Date();
     const formatted = now.toLocaleDateString('pt-BR', {
@@ -165,13 +192,6 @@ export default function App() {
       day: 'numeric'
     });
     setCurrentLiveDate(formatted.charAt(0).toUpperCase() + formatted.slice(1));
-
-    const shortFmt = now.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-    setShortLiveDate(shortFmt);
   }, []);
 
   // Complete any pending Google redirect sign-in on startup (mobile/Safari fallback)
@@ -252,28 +272,24 @@ export default function App() {
 
           if (cancelled) return;
 
-          const hasExistingWorkspace =
-            fbTransactions.length > 0 ||
-            fbDoctors.length > 0 ||
-            fbSupplies.length > 0 ||
-            fbConfig.length > 0;
+          const isCleanSlate = fbConfig.some(c => c.id === 'clean_slate_v1');
 
-          if (!hasExistingWorkspace) {
-            await seedInitialClinicData(activeClinicId, activeUid, {
-              transactions: INITIAL_TRANSACTIONS,
-              doctors: INITIAL_DOCTORS,
-              supplies: INITIAL_SUPPLY_ITEMS,
-              goals: INITIAL_TEAM_GOALS,
-              teamMembers: INITIAL_TEAM_MEMBERS,
-              monthlyGoal: 50000
-            });
+          if (!isCleanSlate) {
+            await clearAllClinicData(activeClinicId, activeUid);
+            clearLocalClinicStorage();
+            try {
+              localStorage.setItem(LOCAL_CLEAN_SLATE_KEY, '1');
+            } catch {
+              // ignore storage errors
+            }
             if (cancelled) return;
-            setTransactions(INITIAL_TRANSACTIONS);
-            setDoctors(INITIAL_DOCTORS);
-            setSupplies(INITIAL_SUPPLY_ITEMS);
-            setGoals(INITIAL_TEAM_GOALS);
-            setTeamMembers(INITIAL_TEAM_MEMBERS);
-            setMonthlyGoalState(50000);
+            setTransactions([]);
+            setDoctors([]);
+            setSupplies([]);
+            setGoals([]);
+            setTeamMembers([]);
+            setMonthlyGoalState(0);
+            setWorkspaceResetKey(prev => prev + 1);
           } else {
             setTransactions(
               [...fbTransactions].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -283,7 +299,7 @@ export default function App() {
             setGoals(fbGoals);
             setTeamMembers(fbTeam);
             const goalDoc = fbConfig.find(c => c.id === 'monthly_goal');
-            setMonthlyGoalState(goalDoc ? goalDoc.val : 50000);
+            setMonthlyGoalState(goalDoc ? goalDoc.val : 0);
           }
         } else if (role === 'dentista') {
           const fbDoctors = await loadClinicCollection<Doctor>(activeClinicId, 'doctors');
@@ -743,31 +759,30 @@ export default function App() {
     if (userRole !== 'gestao') return;
     if (
       window.confirm(
-        'Deseja mesmo redefinir todos os faturamentos e estoques para os valores iniciais do sistema?'
+        'Deseja mesmo zerar todos os dados do dashboard (lançamentos, dentistas, metas, estoque, escala, sanitização e laboratório) para começar do zero?'
       )
     ) {
-      localStorage.removeItem('clinica_gamification_v3');
+      clearLocalClinicStorage();
+      try {
+        localStorage.setItem(LOCAL_CLEAN_SLATE_KEY, '1');
+      } catch {
+        // ignore storage errors
+      }
 
-      setTransactions(INITIAL_TRANSACTIONS);
-      setDoctors(INITIAL_DOCTORS);
-      setSupplies(INITIAL_SUPPLY_ITEMS);
-      setGoals(INITIAL_TEAM_GOALS);
-      setTeamMembers(INITIAL_TEAM_MEMBERS);
-      setMonthlyGoalState(50000);
+      setTransactions([]);
+      setDoctors([]);
+      setSupplies([]);
+      setGoals([]);
+      setTeamMembers([]);
+      setMonthlyGoalState(0);
+      setWorkspaceResetKey(prev => prev + 1);
       setActiveTab('visao-geral');
 
       if (uid) {
         try {
-          await clearAndSeedClinicData(clinicId, uid, {
-            transactions: INITIAL_TRANSACTIONS,
-            doctors: INITIAL_DOCTORS,
-            supplies: INITIAL_SUPPLY_ITEMS,
-            goals: INITIAL_TEAM_GOALS,
-            teamMembers: INITIAL_TEAM_MEMBERS,
-            monthlyGoal: 50000
-          });
+          await clearAllClinicData(clinicId, uid);
         } catch (err) {
-          console.error('[Firebase] Erro ao restaurar dados:', err);
+          console.error('[Firebase] Erro ao zerar dados:', err);
         }
       }
     }
@@ -789,58 +804,58 @@ export default function App() {
       case 'visao-geral':
         return {
           title: `Olá, ${firstName}`,
-          subtitle: `${currentLiveDate || 'Hoje'} · Perfil ${ROLE_LABELS[userRole]}`
+          subtitle: `${currentLiveDate || 'Hoje'} · Resumo geral da clínica`
         };
       case 'financeiro':
         return {
           title: 'Financeiro',
-          subtitle: 'DRE gerencial, fechamento de caixa diário e fluxo de lançamentos'
+          subtitle: 'Resumo do mês, fechamento do caixa do dia e lista de entradas e saídas'
         };
       case 'doutora':
         return {
-          title: userRole === 'funcionario' ? 'Escala dos consultórios' : 'Dentistas',
+          title: userRole === 'funcionario' ? 'Escala dos consultórios' : userRole === 'dentista' ? 'Meu desempenho' : 'Dentistas e escala',
           subtitle:
             userRole === 'funcionario'
-              ? 'Agenda e alocação por consultório e procedimento'
-              : 'Produção individual, metas, conversão de avaliações e escala'
+              ? 'Veja em qual consultório cada dentista atende durante a semana'
+              : 'Acompanhe resultados, metas e a escala semanal dos consultórios'
         };
       case 'metas-equipe':
         return {
-          title: 'Metas & equipe',
-          subtitle: 'Objetivos clínicos, acompanhamento da equipe e engajamento'
+          title: 'Metas e equipe',
+          subtitle: 'Acompanhe os objetivos do mês e os profissionais da clínica'
         };
       case 'compras':
         return {
-          title: 'Compras e estoque',
-          subtitle: 'Controle de insumos odontológicos, validades e registros de compra'
+          title: 'Estoque e compras',
+          subtitle: 'Controle a quantidade e a validade dos materiais e registre compras'
         };
       case 'sanitizacao':
         return {
-          title: 'Sanitização',
-          subtitle: 'Protocolo diário de esterilização, biossegurança e assinaturas'
+          title: 'Limpeza e sanitização',
+          subtitle: 'Marque os cuidados do dia e assine a conferência diária'
         };
       case 'laboratorio':
         return {
           title: 'Laboratório',
-          subtitle: 'Acompanhamento de próteses, prazos de retorno e entregas'
+          subtitle: 'Acompanhe o andamento de próteses, envios e entregas'
         };
       case 'utilitarios':
         return {
-          title: 'Utilitários',
-          subtitle: 'Calculadoras clínicas, documentos rápidos e ferramentas de apoio'
+          title: 'Documentos e Pix',
+          subtitle: 'Gere cobranças Pix, recibos, atestados e termos prontos para enviar'
         };
       case 'historico':
         return {
           title: 'Histórico',
-          subtitle: 'Registro completo de lançamentos financeiros e emissão de recibos'
+          subtitle: 'Consulte todos os lançamentos registrados e emita recibos'
         };
       case 'acessos':
         return {
           title: 'Controle de acessos',
-          subtitle: 'Defina permissões para Gestão, Dentista e Funcionário por conta Google'
+          subtitle: 'Escolha quem pode entrar e o que cada pessoa da equipe pode ver'
         };
       default:
-        return { title: 'Visão geral', subtitle: currentLiveDate };
+        return { title: 'Início', subtitle: currentLiveDate };
     }
   };
 
@@ -886,7 +901,7 @@ export default function App() {
   const goToDefaultTab = () => setActiveTab(getDefaultTabForRole(userRole));
 
   return (
-    <div className="bg-[#FAFAFA] text-[#18181B] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans">
+    <div className="bg-[#F7F8FA] text-[#14181F] min-h-[100dvh] w-full max-w-full overflow-x-clip flex font-sans">
       {/* Full-Height Left Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -910,44 +925,48 @@ export default function App() {
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col min-w-0 w-full min-h-[100dvh] transition-all duration-200 ease-out ${
-          isCollapsed ? 'md:ml-[72px]' : 'md:ml-64'
+          isCollapsed ? 'md:ml-[76px]' : 'md:ml-[264px]'
         } ml-0`}
       >
-        {/* Unified Minimalist Top Workspace Header */}
-        <header className="sticky top-0 z-20 bg-[#FAFAFA]/90 backdrop-blur-md border-b border-[#ECECEE]/80 px-3.5 sm:px-8 py-3 sm:py-4">
-          <div className="max-w-[1400px] mx-auto flex items-center justify-between gap-2 sm:gap-4 min-w-0">
-            {/* Left: Mobile Trigger + Title & Quiet Subtitle */}
-            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+        {/* Clean, Breathable Top Bar */}
+        <header className="sticky top-0 z-20 bg-[#F7F8FA]/95 backdrop-blur-md border-b border-[#E6EAF0] px-4 sm:px-8 lg:px-10 py-4 sm:py-5">
+          <div className="max-w-[1280px] mx-auto flex items-center justify-between gap-3 sm:gap-6 min-w-0">
+            {/* Left: Clear Mobile Menu Trigger + Page Heading */}
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
               <button
+                type="button"
                 onClick={() => setMobileOpen(true)}
-                className="md:hidden w-9 h-9 rounded-xl bg-white border border-[#EBEBED] text-[#52525B] hover:text-[#18181B] flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                title="Abrir menu"
+                className="md:hidden h-11 px-3.5 rounded-xl bg-white border border-[#E6EAF0] text-[#14181F] hover:bg-[#F1F4F7] flex items-center gap-2 transition-colors cursor-pointer shrink-0 font-medium text-sm"
+                aria-label="Abrir menu"
               >
-                <Menu size={18} />
+                <Menu size={18} className="text-[#3795AE]" />
+                <span>Menu</span>
               </button>
 
               <div className="min-w-0 flex-1">
-                <h1 className="font-display font-semibold text-[15px] sm:text-[22px] text-[#18181B] tracking-[-0.02em] leading-tight truncate">
+                <h1 className="font-display font-semibold text-[18px] sm:text-[24px] text-[#14181F] tracking-[-0.02em] leading-tight truncate">
                   {headerMeta.title}
                 </h1>
-                <p className="text-[11px] sm:text-xs text-[#71717A] mt-0.5 truncate">
+                <p className="text-[12.5px] sm:text-[13.5px] text-[#647082] mt-0.5 truncate">
                   {headerMeta.subtitle}
                 </p>
               </div>
             </div>
 
-            {/* Right: Minimalist Utility Controls */}
-            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            {/* Right: Quiet Alerts + Single Primary Action */}
+            <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
               {/* Notifications Button & Popover */}
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="w-9 h-9 rounded-xl bg-white border border-[#EBEBED] hover:border-[#D4D4D8] text-[#52525B] hover:text-[#18181B] flex items-center justify-center transition-colors relative cursor-pointer"
-                  title="Alertas clínicos"
+                  className="h-11 px-3 sm:px-3.5 rounded-xl bg-white border border-[#E6EAF0] hover:border-[#CBD5E1] text-[#4B5563] hover:text-[#14181F] flex items-center gap-2 transition-colors relative cursor-pointer"
+                  title="Ver avisos da clínica"
                 >
-                  <Bell size={16} />
+                  <Bell size={18} />
+                  <span className="hidden lg:inline text-[13.5px] font-medium whitespace-nowrap">Avisos</span>
                   {notificationList.length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-semibold tabular-nums flex items-center justify-center">
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-[#DC2626] text-white text-[11px] font-semibold tabular-nums flex items-center justify-center">
                       {notificationList.length}
                     </span>
                   )}
@@ -960,46 +979,47 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.98 }}
                       transition={{ duration: 0.15 }}
-                      className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-[64px] sm:top-11 sm:w-80 bg-white border border-[#EBEBED] rounded-2xl shadow-lg z-50 overflow-hidden"
+                      className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-[74px] sm:top-13 sm:w-[360px] bg-white border border-[#E6EAF0] rounded-2xl shadow-lg z-50 overflow-hidden"
                     >
-                      <div className="px-4 py-3 border-b border-[#F1F1F3] flex justify-between items-center">
-                        <span className="text-xs font-semibold text-[#18181B]">Alertas clínicos</span>
-                        <span className="text-[11px] font-medium text-[#71717A] tabular-nums">
-                          {notificationList.length} {notificationList.length === 1 ? 'pendência' : 'pendências'}
+                      <div className="px-5 py-4 border-b border-[#ECEFF3] flex justify-between items-center">
+                        <span className="text-sm font-semibold text-[#14181F]">Avisos importantes</span>
+                        <span className="text-xs text-[#647082] tabular-nums">
+                          {notificationList.length} {notificationList.length === 1 ? 'aviso' : 'avisos'}
                         </span>
                       </div>
 
-                      <div className="max-h-[300px] overflow-y-auto divide-y divide-[#F1F1F3]">
+                      <div className="max-h-[340px] overflow-y-auto divide-y divide-[#ECEFF3]">
                         {notificationList.length === 0 ? (
-                          <div className="p-6 text-center text-xs text-[#71717A]">
-                            Nenhuma pendência ou atraso detectado no momento.
+                          <div className="p-8 text-center text-sm text-[#647082]">
+                            Tudo certo por aqui. Nenhum aviso pendente no momento.
                           </div>
                         ) : (
                           notificationList.map(notif => (
                             <button
                               key={notif.id}
+                              type="button"
                               onClick={() => {
                                 if (notif.type === 'sanitizacao') setActiveTab('sanitizacao');
                                 if (notif.type === 'compras') setActiveTab('compras');
                                 if (notif.type === 'laboratorio') setActiveTab('laboratorio');
                                 setShowNotifications(false);
                               }}
-                              className="w-full p-3.5 hover:bg-[#FAFAFA] transition-colors cursor-pointer text-left space-y-1 block"
+                              className="w-full p-4 hover:bg-[#F7F8FA] transition-colors cursor-pointer text-left space-y-1.5 block"
                             >
                               <div className="flex items-center justify-between gap-2">
-                                <h4 className="text-xs font-semibold text-[#18181B] truncate">{notif.title}</h4>
+                                <h4 className="text-[13.5px] font-semibold text-[#14181F] truncate">{notif.title}</h4>
                                 <span
-                                  className={`text-[10px] font-medium shrink-0 ${
-                                    notif.severity === 'high' ? 'text-[#DC2626]' : 'text-[#D97706]'
+                                  className={`text-xs font-medium shrink-0 ${
+                                    notif.severity === 'high' ? 'text-[#DC2626]' : 'text-[#B45309]'
                                   }`}
                                 >
-                                  {notif.severity === 'high' ? 'Urgente' : 'Atenção'}
+                                  {notif.severity === 'high' ? 'Prioridade' : 'Atenção'}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-[#71717A] leading-relaxed">{notif.desc}</p>
-                              <div className="text-[11px] text-[#3795AE] font-medium flex items-center gap-1 pt-0.5">
-                                <span>Abrir seção</span>
-                                <ArrowRight size={11} />
+                              <p className="text-[13px] text-[#647082] leading-relaxed">{notif.desc}</p>
+                              <div className="text-xs text-[#3795AE] font-semibold flex items-center gap-1 pt-0.5">
+                                <span>Ir para esta tela</span>
+                                <ArrowRight size={13} />
                               </div>
                             </button>
                           ))
@@ -1010,21 +1030,16 @@ export default function App() {
                 </AnimatePresence>
               </div>
 
-              {/* Compact Date Pill */}
-              <div className="hidden sm:flex items-center gap-2 bg-white border border-[#EBEBED] px-3 py-2 rounded-xl text-xs font-medium text-[#3F3F46] whitespace-nowrap shrink-0">
-                <Calendar size={14} className="text-[#71717A]" />
-                <span className="tabular-nums">{shortLiveDate || 'Hoje'}</span>
-              </div>
-
               {/* Single Primary Action on Overview (Gestão only) */}
               {activeTab === 'visao-geral' && userRole === 'gestao' && (
                 <button
+                  type="button"
                   onClick={() => setQuickAddTrigger(prev => prev + 1)}
-                  className="flex items-center gap-1.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  className="h-11 flex items-center gap-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white px-4 sm:px-5 rounded-xl text-[13.5px] font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <Plus size={15} />
+                  <Plus size={17} />
                   <span className="hidden sm:inline">Novo lançamento</span>
-                  <span className="sm:hidden">Novo</span>
+                  <span className="sm:hidden">Lançar</span>
                 </button>
               )}
             </div>
@@ -1032,11 +1047,11 @@ export default function App() {
         </header>
 
         {/* Main Active View Container */}
-        <main className="flex-1 p-3.5 sm:p-6 md:p-8 min-w-0 w-full">
-          <div className="max-w-[1400px] mx-auto w-full min-w-0">
+        <main className="flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8 lg:py-9 min-w-0 w-full">
+          <div key={workspaceResetKey} className="max-w-[1280px] mx-auto w-full min-w-0">
             {dataLoading && doctors.length === 0 && supplies.length === 0 && transactions.length === 0 ? (
-              <div className="py-24 flex flex-col items-center justify-center gap-3 text-xs text-[#71717A]">
-                <Loader2 size={20} className="animate-spin text-[#3795AE]" />
+              <div className="py-28 flex flex-col items-center justify-center gap-3 text-sm text-[#647082]">
+                <Loader2 size={24} className="animate-spin text-[#3795AE]" />
                 <span>Carregando dados da clínica...</span>
               </div>
             ) : (

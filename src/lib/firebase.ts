@@ -411,7 +411,7 @@ function sanitizeEntityPayload(
         id,
         clinicId: safeClinicId,
         ownerId: safeOwnerId,
-        val: clampNumber(raw.val, 50000),
+        val: clampNumber(raw.val, 0),
       };
   }
 }
@@ -982,7 +982,7 @@ export async function upsertClinicMonthlyGoal(
 ): Promise<void> {
   const path = `clinics/${clinicId}/config/monthly_goal`;
   const docRef = doc(db, 'clinics', clinicId, 'config', 'monthly_goal');
-  const clamped = clampNumber(val, 50000);
+  const clamped = clampNumber(val, 0);
 
   try {
     const snap = await getDoc(docRef);
@@ -1006,67 +1006,12 @@ export async function upsertClinicMonthlyGoal(
   }
 }
 
-export async function seedInitialClinicData(
+export async function clearAllClinicData(
   clinicId: string,
-  ownerUid: string,
-  seed: {
-    transactions: Record<string, any>[];
-    doctors: Record<string, any>[];
-    supplies: Record<string, any>[];
-    goals: Record<string, any>[];
-    teamMembers: Record<string, any>[];
-    monthlyGoal: number;
-  }
+  ownerUid: string
 ): Promise<void> {
-  const path = `clinics/${clinicId}/seed`;
-  try {
-    const batch = writeBatch(db);
-
-    const addGroup = (subcollection: ClinicSubcollection, items: Record<string, any>[]) => {
-      for (const item of items) {
-        const safeId = sanitizeId(String(item.id));
-        const sanitized = sanitizeEntityPayload(subcollection, clinicId, ownerUid, safeId, item);
-        batch.set(doc(db, 'clinics', clinicId, subcollection, safeId), {
-          ...sanitized,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      }
-    };
-
-    addGroup('transactions', seed.transactions);
-    addGroup('doctors', seed.doctors);
-    addGroup('supplies', seed.supplies);
-    addGroup('goals', seed.goals);
-    addGroup('teamMembers', seed.teamMembers);
-
-    batch.set(doc(db, 'clinics', clinicId, 'config', 'monthly_goal'), {
-      id: 'monthly_goal',
-      clinicId: sanitizeId(clinicId),
-      ownerId: sanitizeId(ownerUid),
-      val: clampNumber(seed.monthlyGoal, 50000),
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-
-    await batch.commit();
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
-  }
-}
-
-export async function clearAndSeedClinicData(
-  clinicId: string,
-  ownerUid: string,
-  seed: {
-    transactions: Record<string, any>[];
-    doctors: Record<string, any>[];
-    supplies: Record<string, any>[];
-    goals: Record<string, any>[];
-    teamMembers: Record<string, any>[];
-    monthlyGoal: number;
-  }
-): Promise<void> {
+  const safeClinicId = sanitizeId(clinicId);
+  const safeOwnerUid = sanitizeId(ownerUid);
   const subcollections: ClinicSubcollection[] = [
     'transactions',
     'doctors',
@@ -1077,19 +1022,42 @@ export async function clearAndSeedClinicData(
   ];
 
   for (const sub of subcollections) {
-    const existingDocs = await loadClinicCollection<{ id: string }>(clinicId, sub);
+    const existingDocs = await loadClinicCollection<{ id: string }>(safeClinicId, sub);
     if (existingDocs.length > 0) {
       const delBatch = writeBatch(db);
       for (const item of existingDocs) {
-        delBatch.delete(doc(db, 'clinics', clinicId, sub, item.id));
+        delBatch.delete(doc(db, 'clinics', safeClinicId, sub, item.id));
       }
       try {
         await delBatch.commit();
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `clinics/${clinicId}/${sub}`);
+        handleFirestoreError(error, OperationType.DELETE, `clinics/${safeClinicId}/${sub}`);
       }
     }
   }
 
-  await seedInitialClinicData(clinicId, ownerUid, seed);
+  // Write clean-slate marker and zero monthly goal so fictional seed data never returns
+  const initBatch = writeBatch(db);
+  initBatch.set(doc(db, 'clinics', safeClinicId, 'config', 'clean_slate_v1'), {
+    id: 'clean_slate_v1',
+    clinicId: safeClinicId,
+    ownerId: safeOwnerUid,
+    val: 1,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  initBatch.set(doc(db, 'clinics', safeClinicId, 'config', 'monthly_goal'), {
+    id: 'monthly_goal',
+    clinicId: safeClinicId,
+    ownerId: safeOwnerUid,
+    val: 0,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  try {
+    await initBatch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `clinics/${safeClinicId}/config`);
+  }
 }

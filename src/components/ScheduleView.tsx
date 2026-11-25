@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Search, Filter, Printer, Edit2, Save, RotateCcw, Check, User, Sparkles, Clock, MapPin, Stethoscope, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Printer,
+  Edit2,
+  Check,
+  RotateCcw,
+  Clock,
+  Plus,
+  X
+} from 'lucide-react';
 import { openPrintWindow } from '../lib/pdfUtils';
 
 export interface ScheduleCell {
@@ -13,8 +22,8 @@ export interface RoomSchedule {
   badge?: string;
   shifts: {
     period: 'M' | 'T' | 'N';
-    periodLabel: string; // 'Manhã', 'Tarde', 'Noite'
-    timeRange: string;   // '08:00 - 12:00', etc.
+    periodLabel: string;
+    timeRange: string;
     days: {
       segunda: ScheduleCell | null;
       terca: ScheduleCell | null;
@@ -25,176 +34,36 @@ export interface RoomSchedule {
   }[];
 }
 
+const createEmptyRoom = (id: number, name: string): RoomSchedule => ({
+  id,
+  name,
+  shifts: [
+    {
+      period: 'M',
+      periodLabel: 'Manhã',
+      timeRange: '08h às 12h',
+      days: { segunda: null, terca: null, quarta: null, quinta: null, sexta: null }
+    },
+    {
+      period: 'T',
+      periodLabel: 'Tarde',
+      timeRange: '13h às 17h',
+      days: { segunda: null, terca: null, quarta: null, quinta: null, sexta: null }
+    },
+    {
+      period: 'N',
+      periodLabel: 'Noite',
+      timeRange: '18h às 21h',
+      days: { segunda: null, terca: null, quarta: null, quinta: null, sexta: null }
+    }
+  ]
+});
+
 const INITIAL_SCHEDULES: RoomSchedule[] = [
-  {
-    id: 1,
-    name: 'CONSULTÓRIO 1',
-    shifts: [
-      {
-        period: 'M',
-        periodLabel: 'Manhã',
-        timeRange: '08:00 - 12:00',
-        days: {
-          segunda: { doctor: 'CAMILA' },
-          terca: null,
-          quarta: null,
-          quinta: { doctor: 'MURILO', focus: 'APENAS COROA' },
-          sexta: { doctor: 'AMANDA', focus: 'FOCO EM ORTO' }
-        }
-      },
-      {
-        period: 'T',
-        periodLabel: 'Tarde',
-        timeRange: '13:00 - 17:00',
-        days: {
-          segunda: { doctor: 'CAROL', focus: 'FOCO EM CIRURGIA' },
-          terca: { doctor: 'AMANDA', focus: 'FOCO EM CIRURGIA DE IMPLANTE' },
-          quarta: { doctor: 'CAROL', focus: 'FOCO EM CIRURGIA' },
-          quinta: { doctor: 'MURILO', focus: 'CIRURGIA DE IMPLANTE' },
-          sexta: { doctor: 'AMANDA' }
-        }
-      },
-      {
-        period: 'N',
-        periodLabel: 'Noite',
-        timeRange: '18:00 - 21:00',
-        days: {
-          segunda: { doctor: 'CAROL', focus: 'FOCO EM CIRURGIA' },
-          terca: null,
-          quarta: { doctor: 'CAROL', focus: 'FOCO EM CIRURGIA' },
-          quinta: null,
-          sexta: null
-        }
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'CONSULTÓRIO 2',
-    badge: 'SÓ PROCEDIMENTO',
-    shifts: [
-      {
-        period: 'M',
-        periodLabel: 'Manhã',
-        timeRange: '08:00 - 12:00',
-        days: {
-          segunda: null,
-          terca: { doctor: 'EWELYN', focus: 'FOCO EM ORTO' },
-          quarta: { doctor: 'EWELYN', focus: 'FOCO EM ENDO' },
-          quinta: null,
-          sexta: { doctor: 'EWELYN', focus: 'FOCO EM ENDO' }
-        }
-      },
-      {
-        period: 'T',
-        periodLabel: 'Tarde',
-        timeRange: '13:00 - 17:00',
-        days: {
-          segunda: { doctor: 'AMANDA', focus: 'FOCO EM ORTO' },
-          terca: { doctor: 'EWELYN', focus: 'FOCO EM ORTO' },
-          quarta: { doctor: 'AMANDA', focus: 'FOCO EM ORTO' },
-          quinta: { doctor: 'CAMILA', focus: 'SÓ PROCEDIMENTO' },
-          sexta: { doctor: 'CARLOS' }
-        }
-      },
-      {
-        period: 'N',
-        periodLabel: 'Noite',
-        timeRange: '18:00 - 21:00',
-        days: {
-          segunda: { doctor: 'AMANDA', focus: 'FOCO EM ORTO' },
-          terca: null,
-          quarta: null,
-          quinta: null,
-          sexta: null
-        }
-      }
-    ]
-  },
-  {
-    id: 3,
-    name: 'CONSULTÓRIO 3',
-    shifts: [
-      {
-        period: 'M',
-        periodLabel: 'Manhã',
-        timeRange: '08:00 - 12:00',
-        days: {
-          segunda: { doctor: 'NICOLE' },
-          terca: { doctor: 'AMANDA' },
-          quarta: { doctor: 'AMANDA' },
-          quinta: { doctor: 'CAMILA' },
-          sexta: { doctor: 'CAMILA' }
-        }
-      },
-      {
-        period: 'T',
-        periodLabel: 'Tarde',
-        timeRange: '13:00 - 17:00',
-        days: {
-          segunda: { doctor: 'NICOLE' },
-          terca: { doctor: 'CAROL' },
-          quarta: { doctor: 'CAMILA' },
-          quinta: { doctor: 'CAROL' },
-          sexta: { doctor: 'CAMILA' }
-        }
-      },
-      {
-        period: 'N',
-        periodLabel: 'Noite',
-        timeRange: '18:00 - 21:00',
-        days: {
-          segunda: null,
-          terca: { doctor: 'CAROL' },
-          quarta: { doctor: 'CAMILA' },
-          quinta: { doctor: 'CAROL' },
-          sexta: { doctor: 'CAMILA' }
-        }
-      }
-    ]
-  },
-  {
-    id: 4,
-    name: 'CONSULTÓRIO 4',
-    shifts: [
-      {
-        period: 'M',
-        periodLabel: 'Manhã',
-        timeRange: '08:00 - 12:00',
-        days: {
-          segunda: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          terca: { doctor: 'KAREN' },
-          quarta: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          quinta: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          sexta: { doctor: 'NICOLE' }
-        }
-      },
-      {
-        period: 'T',
-        periodLabel: 'Tarde',
-        timeRange: '13:00 - 17:00',
-        days: {
-          segunda: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          terca: { doctor: 'KAREN' },
-          quarta: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          quinta: { doctor: 'KAREN', focus: 'APENAS AVALIAÇÃO' },
-          sexta: { doctor: 'NICOLE' }
-        }
-      },
-      {
-        period: 'N',
-        periodLabel: 'Noite',
-        timeRange: '18:00 - 21:00',
-        days: {
-          segunda: null,
-          terca: null,
-          quarta: null,
-          quinta: null,
-          sexta: null
-        }
-      }
-    ]
-  }
+  createEmptyRoom(1, 'Consultório 1'),
+  createEmptyRoom(2, 'Consultório 2'),
+  createEmptyRoom(3, 'Consultório 3'),
+  createEmptyRoom(4, 'Consultório 4')
 ];
 
 type DayKey = 'segunda' | 'terca' | 'quarta' | 'quinta' | 'sexta';
@@ -203,15 +72,23 @@ interface DayConfig {
   key: DayKey;
   label: string;
   fullName: string;
-  badge: string;
 }
 
 const DAYS_CONFIG: DayConfig[] = [
-  { key: 'segunda', label: 'Segunda', fullName: 'Segunda-feira', badge: 'Início da Semana' },
-  { key: 'terca', label: 'Terça', fullName: 'Terça-feira', badge: 'Atendimentos' },
-  { key: 'quarta', label: 'Quarta', fullName: 'Quarta-feira', badge: 'Meio da Semana' },
-  { key: 'quinta', label: 'Quinta', fullName: 'Quinta-feira', badge: 'Atendimentos' },
-  { key: 'sexta', label: 'Sexta', fullName: 'Sexta-feira', badge: 'Encerramento' },
+  { key: 'segunda', label: 'Segunda', fullName: 'Segunda-feira' },
+  { key: 'terca', label: 'Terça', fullName: 'Terça-feira' },
+  { key: 'quarta', label: 'Quarta', fullName: 'Quarta-feira' },
+  { key: 'quinta', label: 'Quinta', fullName: 'Quinta-feira' },
+  { key: 'sexta', label: 'Sexta', fullName: 'Sexta-feira' }
+];
+
+const QUICK_FOCUS_SUGGESTIONS = [
+  'Clínico geral',
+  'Avaliação',
+  'Cirurgia / Implante',
+  'Ortodontia',
+  'Canal (Endo)',
+  'Prótese / Coroa'
 ];
 
 export default function ScheduleView() {
@@ -227,7 +104,6 @@ export default function ScheduleView() {
     return INITIAL_SCHEDULES;
   });
 
-  // Default day based on real current day of week (Monday = 1, Friday = 5)
   const getInitialDay = (): DayKey | 'TODOS' => {
     const today = new Date().getDay();
     if (today === 1) return 'segunda';
@@ -240,12 +116,12 @@ export default function ScheduleView() {
 
   const [selectedDay, setSelectedDay] = useState<DayKey | 'TODOS'>(getInitialDay);
   const [filterDoctor, setFilterDoctor] = useState<string>('TODOS');
-  const [filterProcedure, setFilterProcedure] = useState<string>('TODOS');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  
+
   const [editingCell, setEditingCell] = useState<{
     roomId: number;
+    roomName: string;
     period: 'M' | 'T' | 'N';
     day: DayKey;
   } | null>(null);
@@ -257,49 +133,33 @@ export default function ScheduleView() {
     localStorage.setItem('sejamais_escala_consultorios', JSON.stringify(schedules));
   }, [schedules]);
 
-  // Extract all unique doctor names for filter
   const allDoctorNames = Array.from(
     new Set(
       schedules.flatMap(room =>
         room.shifts.flatMap(shift =>
           Object.values(shift.days)
             .filter((cell): cell is ScheduleCell => cell !== null)
-            .map(cell => cell.doctor.toUpperCase())
+            .map(cell => cell.doctor)
         )
       )
     )
   ).sort();
 
-  // Color helper for procedure tags
-  const getFocusBadgeStyle = (focus?: string) => {
-    if (!focus) return 'bg-gray-100 text-gray-700 border-gray-200';
-    const upper = focus.toUpperCase();
-    if (upper.includes('CIRURGIA') || upper.includes('IMPLANTE')) {
-      return 'bg-purple-100 text-purple-800 border-purple-200 font-bold';
-    }
-    if (upper.includes('ORTO')) {
-      return 'bg-blue-100 text-blue-800 border-blue-200 font-bold';
-    }
-    if (upper.includes('ENDO')) {
-      return 'bg-amber-100 text-amber-800 border-amber-200 font-bold';
-    }
-    if (upper.includes('AVALIAÇÃO') || upper.includes('AVALIACAO')) {
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200 font-bold';
-    }
-    if (upper.includes('COROA') || upper.includes('PRÓTESE')) {
-      return 'bg-cyan-100 text-cyan-800 border-cyan-200 font-bold';
-    }
-    return 'bg-slate-100 text-slate-700 border-slate-200 font-medium';
-  };
-
-  const handleOpenCellEditor = (roomId: number, period: 'M' | 'T' | 'N', day: DayKey, current: ScheduleCell | null) => {
+  const handleOpenCellEditor = (
+    roomId: number,
+    roomName: string,
+    period: 'M' | 'T' | 'N',
+    day: DayKey,
+    current: ScheduleCell | null
+  ) => {
     if (!isEditing) return;
-    setEditingCell({ roomId, period, day });
+    setEditingCell({ roomId, roomName, period, day });
     setEditDocName(current?.doctor || '');
     setEditDocFocus(current?.focus || '');
   };
 
-  const handleSaveCell = () => {
+  const handleSaveCell = (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!editingCell) return;
     setSchedules(prev =>
       prev.map(room => {
@@ -313,7 +173,7 @@ export default function ScheduleView() {
               days: {
                 ...shift.days,
                 [editingCell.day]: editDocName.trim()
-                  ? { doctor: editDocName.trim().toUpperCase(), focus: editDocFocus.trim() || undefined }
+                  ? { doctor: editDocName.trim(), focus: editDocFocus.trim() || undefined }
                   : null
               }
             };
@@ -324,8 +184,33 @@ export default function ScheduleView() {
     setEditingCell(null);
   };
 
+  const handleClearCell = () => {
+    if (!editingCell) return;
+    setEditDocName('');
+    setEditDocFocus('');
+    setSchedules(prev =>
+      prev.map(room => {
+        if (room.id !== editingCell.roomId) return room;
+        return {
+          ...room,
+          shifts: room.shifts.map(shift => {
+            if (shift.period !== editingCell.period) return shift;
+            return {
+              ...shift,
+              days: {
+                ...shift.days,
+                [editingCell.day]: null
+              }
+            };
+          })
+        };
+      })
+    );
+    setEditingCell(null);
+  };
+
   const handleResetSchedule = () => {
-    if (window.confirm('Deseja restaurar a escala original do documento impresso?')) {
+    if (window.confirm('Deseja limpar toda a escala dos consultórios?')) {
       setSchedules(INITIAL_SCHEDULES);
       localStorage.removeItem('sejamais_escala_consultorios');
     }
@@ -333,14 +218,7 @@ export default function ScheduleView() {
 
   const matchesFilter = (cell: ScheduleCell | null) => {
     if (!cell) return false;
-    if (filterDoctor !== 'TODOS' && cell.doctor.toUpperCase() !== filterDoctor) return false;
-    if (filterProcedure !== 'TODOS') {
-      const focusUpper = (cell.focus || '').toUpperCase();
-      if (filterProcedure === 'CIRURGIA' && !focusUpper.includes('CIRURGIA') && !focusUpper.includes('IMPLANTE')) return false;
-      if (filterProcedure === 'ORTO' && !focusUpper.includes('ORTO')) return false;
-      if (filterProcedure === 'ENDO' && !focusUpper.includes('ENDO')) return false;
-      if (filterProcedure === 'AVALIACAO' && !focusUpper.includes('AVALIAÇÃO') && !focusUpper.includes('AVALIACAO')) return false;
-    }
+    if (filterDoctor !== 'TODOS' && cell.doctor !== filterDoctor) return false;
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       const docMatch = cell.doctor.toLowerCase().includes(q);
@@ -350,350 +228,293 @@ export default function ScheduleView() {
     return true;
   };
 
-  // Helper to get stats for a day
   const getDaySummary = (dayKey: DayKey) => {
     const doctors = new Set<string>();
-    const procedures = new Set<string>();
-
     schedules.forEach(room => {
       room.shifts.forEach(shift => {
         const cell = shift.days[dayKey];
-        if (cell) {
-          doctors.add(cell.doctor);
-          if (cell.focus) procedures.add(cell.focus);
-        }
+        if (cell) doctors.add(cell.doctor);
       });
     });
-
     return {
       doctorCount: doctors.size,
-      doctorList: Array.from(doctors),
-      proceduresList: Array.from(procedures)
+      doctorList: Array.from(doctors)
     };
   };
 
-  const daysToRender: DayKey[] = selectedDay === 'TODOS'
-    ? ['segunda', 'terca', 'quarta', 'quinta', 'sexta']
-    : [selectedDay];
+  const daysToRender: DayKey[] =
+    selectedDay === 'TODOS' ? ['segunda', 'terca', 'quarta', 'quinta', 'sexta'] : [selectedDay];
+
+  const periodLabelMap = { M: 'Manhã (08h às 12h)', T: 'Tarde (13h às 17h)', N: 'Noite (18h às 21h)' };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      
-      {/* Top Controls Header Bar */}
-      <div className="bg-white rounded-2xl border border-level-2 p-5 shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+    <div className="space-y-6">
+      {/* Top Controls Card */}
+      <section className="bg-white rounded-2xl border border-[#E6EAF0] p-6 space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#2d8096]/10 text-[#2d8096] flex items-center justify-center font-bold shadow-2xs">
-                <Calendar size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-black font-display text-gray-900 tracking-tight">Escala da Recepção (Por Dia da Semana)</h2>
-                <p className="text-xs text-gray-500 font-medium">Identificação rápida de dentistas, consultórios e procedimentos por dia</p>
-              </div>
-            </div>
+            <h2 className="font-display font-semibold text-lg text-[#14181F]">
+              Escala semanal dos consultórios
+            </h2>
+            <p className="text-sm text-[#647082] mt-0.5">
+              Escolha o dia da semana abaixo para ver ou editar quem atende em cada sala.
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
-            {/* Filter Doctor Dropdown */}
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs">
-              <User size={13} className="text-gray-400" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            {allDoctorNames.length > 0 && (
               <select
                 value={filterDoctor}
                 onChange={e => setFilterDoctor(e.target.value)}
-                className="bg-transparent font-bold text-gray-700 focus:outline-none cursor-pointer"
+                className="min-h-[42px] bg-[#F7F8FA] border border-[#DCE2EA] rounded-xl px-3.5 py-2 text-sm text-[#14181F] focus:outline-none focus:bg-white focus:border-[#3795AE] cursor-pointer"
               >
-                <option value="TODOS">Todos Dentistas</option>
+                <option value="TODOS">Todas as dentistas</option>
                 {allDoctorNames.map(doc => (
-                  <option key={doc} value={doc}>{doc}</option>
+                  <option key={doc} value={doc}>
+                    {doc}
+                  </option>
                 ))}
               </select>
-            </div>
+            )}
 
-            {/* Filter Procedure Dropdown */}
-            <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs">
-              <Filter size={13} className="text-gray-400" />
-              <select
-                value={filterProcedure}
-                onChange={e => setFilterProcedure(e.target.value)}
-                className="bg-transparent font-bold text-gray-700 focus:outline-none cursor-pointer"
-              >
-                <option value="TODOS">Todas Especialidades</option>
-                <option value="CIRURGIA">Cirurgia / Implante</option>
-                <option value="ORTO">Ortodontia</option>
-                <option value="ENDO">Endodontia</option>
-                <option value="AVALIACAO">Apenas Avaliação</option>
-              </select>
-            </div>
-
-            {/* Search Box */}
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#94A0B2]" />
               <input
                 type="text"
                 placeholder="Buscar dentista..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="bg-gray-50 border border-gray-200 text-xs rounded-xl pl-8 pr-3 py-1.5 w-32 focus:w-40 transition-all focus:outline-none focus:ring-2 focus:ring-[#2d8096]/20 font-medium"
+                className="min-h-[42px] bg-[#F7F8FA] border border-[#DCE2EA] text-sm rounded-xl pl-10 pr-3.5 py-2 w-44 sm:w-52 focus:outline-none focus:bg-white focus:border-[#3795AE]"
               />
             </div>
 
-            {/* Edit Mode Toggle */}
             <button
+              type="button"
               onClick={() => setIsEditing(!isEditing)}
-              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 cursor-pointer ${
-                isEditing 
-                  ? 'bg-amber-500 text-white shadow-xs' 
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              className={`min-h-[42px] px-4 py-2 text-sm font-semibold rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                isEditing
+                  ? 'bg-[#15803D] hover:bg-[#166534] text-white'
+                  : 'bg-[#3795AE] hover:bg-[#2B7E94] text-white'
               }`}
             >
-              {isEditing ? <Save size={13} /> : <Edit2 size={13} />}
-              <span>{isEditing ? 'Concluir Edição' : 'Editar Escala'}</span>
+              {isEditing ? <Check size={16} /> : <Edit2 size={15} />}
+              <span>{isEditing ? 'Concluir edição' : 'Editar escala'}</span>
             </button>
 
-            {/* Reset Button */}
             {isEditing && (
               <button
+                type="button"
                 onClick={handleResetSchedule}
-                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
-                title="Restaurar padrão original da foto"
+                className="min-h-[42px] px-3.5 py-2 text-sm font-medium text-[#647082] hover:text-[#DC2626] hover:bg-[#FEF2F2] border border-[#DCE2EA] rounded-xl transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                title="Limpar escala"
               >
-                <RotateCcw size={14} />
+                <RotateCcw size={15} />
+                <span className="hidden sm:inline">Limpar</span>
               </button>
             )}
 
-            {/* Print Button */}
             <button
-              onClick={() => openPrintWindow('escala-print-area', 'Escala por Dia da Semana - Seja Mais Odontologia')}
-              className="px-3 py-1.5 bg-[#2d8096] hover:bg-[#23677a] text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+              type="button"
+              onClick={() =>
+                openPrintWindow('escala-print-area', 'Escala dos Consultórios - Seja Mais Odontologia')
+              }
+              className="min-h-[42px] px-4 py-2 bg-white hover:bg-[#F7F8FA] border border-[#DCE2EA] text-[#374151] text-sm font-medium rounded-xl transition-colors inline-flex items-center gap-2 cursor-pointer whitespace-nowrap"
             >
-              <Printer size={13} />
+              <Printer size={16} />
               <span>Imprimir</span>
             </button>
           </div>
         </div>
 
-        {/* DAY SELECTOR TABS (SMART RECEPTION NAVIGATOR) */}
-        <div className="pt-2 border-t border-gray-100">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {DAYS_CONFIG.map((day) => {
-              const summary = getDaySummary(day.key);
-              const isSelected = selectedDay === day.key;
+        {/* Helpful Editing Instruction Banner */}
+        {isEditing && (
+          <div className="bg-[#3795AE]/8 border border-[#3795AE]/25 rounded-xl px-4 py-3 text-sm text-[#1F6F85] font-medium">
+            Modo de edição ativado: toque em qualquer horário abaixo para colocar ou alterar a dentista daquele turno.
+          </div>
+        )}
 
-              return (
-                <button
-                  key={day.key}
-                  onClick={() => setSelectedDay(day.key)}
-                  className={`px-4 py-2.5 rounded-xl border text-left transition-all shrink-0 cursor-pointer min-w-[150px] ${
-                    isSelected
-                      ? 'bg-[#2d8096] text-white border-[#2d8096] shadow-sm ring-2 ring-[#2d8096]/20'
-                      : 'bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-700'
+        {/* Day Selector Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-1">
+          {DAYS_CONFIG.map(day => {
+            const summary = getDaySummary(day.key);
+            const isSelected = selectedDay === day.key;
+
+            return (
+              <button
+                key={day.key}
+                type="button"
+                onClick={() => setSelectedDay(day.key)}
+                className={`min-h-[48px] px-4 py-2.5 rounded-xl border text-left transition-all shrink-0 cursor-pointer min-w-[130px] ${
+                  isSelected
+                    ? 'bg-[#3795AE] text-white border-[#3795AE]'
+                    : 'bg-[#F7F8FA] hover:bg-[#F1F4F7] border-[#E6EAF0] text-[#374151]'
+                }`}
+              >
+                <div className="font-semibold text-sm">{day.label}</div>
+                <div
+                  className={`text-xs mt-0.5 tabular-nums ${
+                    isSelected ? 'text-white/85' : 'text-[#647082]'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-display font-black text-xs uppercase tracking-wider">{day.label}</span>
-                    <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full uppercase ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}>
-                      {summary.doctorCount} Dr.
-                    </span>
-                  </div>
-                  <p className={`text-[10px] font-medium mt-1 truncate ${
-                    isSelected ? 'text-white/80' : 'text-gray-500'
-                  }`}>
-                    {summary.doctorList.slice(0, 3).join(', ')}
-                    {summary.doctorList.length > 3 ? '...' : ''}
-                  </p>
-                </button>
-              );
-            })}
+                  {summary.doctorCount === 0
+                    ? 'Sem escala'
+                    : `${summary.doctorCount} ${summary.doctorCount === 1 ? 'dentista' : 'dentistas'}`}
+                </div>
+              </button>
+            );
+          })}
 
-            {/* ALL DAYS / VISÃO SEMANAL COMPLETA */}
-            <button
-              onClick={() => setSelectedDay('TODOS')}
-              className={`px-4 py-2.5 rounded-xl border text-left transition-all shrink-0 cursor-pointer min-w-[150px] ${
-                selectedDay === 'TODOS'
-                  ? 'bg-gray-900 text-white border-gray-900 shadow-sm ring-2 ring-gray-900/20'
-                  : 'bg-gray-50/80 hover:bg-gray-100 border-gray-200 text-gray-700'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-display font-black text-xs uppercase tracking-wider">Ver Semana Toda</span>
-                <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full uppercase ${
-                  selectedDay === 'TODOS' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
-                }`}>
-                  5 Dias
-                </span>
-              </div>
-              <p className={`text-[10px] font-medium mt-1 truncate ${
-                selectedDay === 'TODOS' ? 'text-white/80' : 'text-gray-500'
-              }`}>
-                Segunda a Sexta
-              </p>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedDay('TODOS')}
+            className={`min-h-[48px] px-4 py-2.5 rounded-xl border text-left transition-all shrink-0 cursor-pointer min-w-[140px] ${
+              selectedDay === 'TODOS'
+                ? 'bg-[#14181F] text-white border-[#14181F]'
+                : 'bg-[#F7F8FA] hover:bg-[#F1F4F7] border-[#E6EAF0] text-[#374151]'
+            }`}
+          >
+            <div className="font-semibold text-sm">Semana inteira</div>
+            <div className={`text-xs mt-0.5 ${selectedDay === 'TODOS' ? 'text-white/80' : 'text-[#647082]'}`}>
+              Segunda a Sexta
+            </div>
+          </button>
         </div>
-      </div>
+      </section>
 
-      {/* MAIN PRINTABLE SCHEDULE SECTION */}
-      <div id="escala-print-area" className="space-y-8">
-        {daysToRender.map((dayKey) => {
+      {/* Main Schedule Area */}
+      <div id="escala-print-area" className="space-y-6">
+        {daysToRender.map(dayKey => {
           const config = DAYS_CONFIG.find(d => d.key === dayKey)!;
           const summary = getDaySummary(dayKey);
 
           return (
-            <div
+            <section
               key={dayKey}
-              className="bg-white rounded-2xl border border-[#EBEBED] overflow-hidden transition-all"
+              className="bg-white rounded-2xl border border-[#E6EAF0] overflow-hidden"
             >
-              {/* Day Section Header */}
-              <div className="bg-[#FAFAFA] px-5 sm:px-6 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-[#EBEBED]">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] font-semibold font-display text-xs flex items-center justify-center uppercase shrink-0">
-                    {config.label.substring(0, 3)}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-display font-semibold text-sm text-[#18181B]">
-                        {config.fullName}
-                      </h3>
-                      <span className="text-[11px] font-medium bg-[#ECFDF5] text-[#16A34A] px-2 py-0.5 rounded-md tabular-nums">
-                        {summary.doctorCount} dentistas no dia
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#71717A] mt-0.5">
-                      Distribuição nos consultórios 1, 2, 3 e 4
-                    </p>
-                  </div>
-                </div>
-
-                {/* Quick Doctor Badges for Day */}
-                <div className="flex flex-wrap gap-1.5 items-center">
-                  <span className="text-xs text-[#71717A] mr-1">Equipe:</span>
-                  {summary.doctorList.map(docName => (
-                    <span
-                      key={docName}
-                      className="bg-white text-[#3F3F46] text-[11px] font-medium px-2.5 py-0.5 rounded-md border border-[#EBEBED]"
-                    >
-                      Dr(a). {docName}
-                    </span>
-                  ))}
+              <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#ECEFF3] bg-[#F8FAFC]">
+                <div>
+                  <h3 className="font-display font-semibold text-base text-[#14181F]">
+                    {config.fullName}
+                  </h3>
+                  <p className="text-[13px] text-[#647082]">
+                    {summary.doctorCount > 0
+                      ? `Em atendimento: ${summary.doctorList.join(' · ')}`
+                      : 'Nenhum atendimento definido ainda para este dia'}
+                  </p>
                 </div>
               </div>
 
-              {/* TABLE BY DAY: CONSULTÓRIOS X TURNO */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-gray-100/90 border-b border-gray-200 text-[11px] text-gray-700 font-black uppercase tracking-wider">
-                      <th className="py-3 px-4 w-44 border-r border-gray-200 bg-gray-100/90">
-                        Consultório / Sala
+                    <tr className="border-b border-[#ECEFF3] text-[13px] text-[#647082] font-medium bg-white">
+                      <th className="py-3.5 px-6 w-44 border-r border-[#ECEFF3]">Consultório</th>
+                      <th className="py-3.5 px-4 border-r border-[#ECEFF3] text-center w-1/3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock size={14} className="text-[#3795AE]" />
+                          Manhã (08h às 12h)
+                        </span>
                       </th>
-                      <th className="py-3 px-4 border-r border-gray-200 text-center w-1/3">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Clock size={13} className="text-amber-600" />
-                          <span>MANHÃ (08h - 12h)</span>
-                        </div>
+                      <th className="py-3.5 px-4 border-r border-[#ECEFF3] text-center w-1/3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock size={14} className="text-[#3795AE]" />
+                          Tarde (13h às 17h)
+                        </span>
                       </th>
-                      <th className="py-3 px-4 border-r border-gray-200 text-center w-1/3">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Clock size={13} className="text-blue-600" />
-                          <span>TARDE (13h - 17h)</span>
-                        </div>
-                      </th>
-                      <th className="py-3 px-4 text-center w-1/3">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Clock size={13} className="text-purple-600" />
-                          <span>NOITE (18h - 21h)</span>
-                        </div>
+                      <th className="py-3.5 px-4 text-center w-1/3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock size={14} className="text-[#3795AE]" />
+                          Noite (18h às 21h)
+                        </span>
                       </th>
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-200 text-xs">
-                    {schedules.map((room) => {
+                  <tbody className="divide-y divide-[#ECEFF3] text-sm">
+                    {schedules.map(room => {
                       const morningCell = room.shifts.find(s => s.period === 'M')?.days[dayKey] || null;
                       const afternoonCell = room.shifts.find(s => s.period === 'T')?.days[dayKey] || null;
                       const nightCell = room.shifts.find(s => s.period === 'N')?.days[dayKey] || null;
 
                       return (
-                        <tr key={room.id} className="hover:bg-gray-50/60 transition-colors">
-                          {/* Consultório Title Header Cell */}
-                          <td className="py-4 px-4 border-r border-gray-200 bg-gray-50/70 align-middle">
-                            <div className="flex flex-col">
-                              <span className="font-display font-black text-xs text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
-                                <MapPin size={13} className="text-[#2d8096] shrink-0" />
-                                {room.name}
-                              </span>
-                              {room.badge && (
-                                <span className="text-[9px] font-bold text-[#2d8096] bg-[#2d8096]/10 px-2 py-0.5 rounded-md mt-1 w-fit uppercase tracking-wider">
-                                  {room.badge}
-                                </span>
-                              )}
-                            </div>
+                        <tr key={room.id} className="hover:bg-[#F8FAFC]/60 transition-colors">
+                          <td className="py-5 px-6 border-r border-[#ECEFF3] bg-[#F8FAFC]/60 font-semibold text-[#14181F] whitespace-nowrap">
+                            {room.name}
                           </td>
-
-                          {/* MANHÃ CELL */}
-                          {renderScheduleCell(room.id, 'M', dayKey, morningCell)}
-
-                          {/* TARDE CELL */}
-                          {renderScheduleCell(room.id, 'T', dayKey, afternoonCell)}
-
-                          {/* NOITE CELL */}
-                          {renderScheduleCell(room.id, 'N', dayKey, nightCell)}
+                          {renderScheduleCell(room.id, room.name, 'M', dayKey, morningCell)}
+                          {renderScheduleCell(room.id, room.name, 'T', dayKey, afternoonCell)}
+                          {renderScheduleCell(room.id, room.name, 'N', dayKey, nightCell)}
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </section>
           );
         })}
       </div>
 
-      {/* CELL EDITOR MODAL */}
+      {/* Cell Editor Modal */}
       {editingCell && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl border border-gray-200">
-            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+        <div className="fixed inset-0 bg-[#14181F]/35 backdrop-blur-[2px] flex items-center justify-center p-4 z-50">
+          <form
+            onSubmit={handleSaveCell}
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full space-y-5 shadow-xl border border-[#E6EAF0]"
+          >
+            <div className="flex justify-between items-start gap-3">
               <div>
-                <h4 className="font-display font-bold text-sm text-gray-900">Editar Escala de Horário</h4>
-                <p className="text-[10px] text-gray-500 font-medium">
-                  {editingCell.day.toUpperCase()} • Consultório {editingCell.roomId} • Turno {editingCell.period}
+                <h4 className="font-display font-semibold text-lg text-[#14181F]">
+                  Definir atendimento
+                </h4>
+                <p className="text-[13px] text-[#647082] mt-0.5">
+                  {DAYS_CONFIG.find(d => d.key === editingCell.day)?.fullName} · {editingCell.roomName} ·{' '}
+                  {periodLabelMap[editingCell.period]}
                 </p>
               </div>
-              <button onClick={() => setEditingCell(null)} className="text-gray-400 hover:text-gray-600 text-sm font-bold">×</button>
+              <button
+                type="button"
+                onClick={() => setEditingCell(null)}
+                className="w-9 h-9 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Nome da Doutora / Dentista</label>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  Nome da dentista
+                </label>
                 <input
                   type="text"
-                  placeholder="Ex: CAMILA, CAROL, AMANDA, MURILO"
+                  autoFocus
+                  placeholder="Digite o nome da dentista"
                   value={editDocName}
                   onChange={e => setEditDocName(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 uppercase focus:outline-none focus:ring-2 focus:ring-[#2d8096]/20"
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Foco do Atendimento / Procedimento</label>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  Tipo de atendimento <span className="text-[#94A0B2] font-normal">(opcional)</span>
+                </label>
                 <input
                   type="text"
-                  placeholder="Ex: FOCO EM CIRURGIA, APENAS AVALIAÇÃO"
+                  placeholder="Ex: Avaliação, Ortodontia, Cirurgia"
                   value={editDocFocus}
                   onChange={e => setEditDocFocus(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#2d8096]/20"
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
                 />
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {['FOCO EM CIRURGIA', 'FOCO EM ORTO', 'FOCO EM ENDO', 'APENAS AVALIAÇÃO', 'CIRURGIA DE IMPLANTE', 'APENAS COROA'].map(sug => (
+                <div className="flex flex-wrap gap-1.5 mt-2.5">
+                  {QUICK_FOCUS_SUGGESTIONS.map(sug => (
                     <button
                       key={sug}
                       type="button"
                       onClick={() => setEditDocFocus(sug)}
-                      className="text-[9px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-medium cursor-pointer"
+                      className="text-xs bg-[#F1F4F7] hover:bg-[#E6EAF0] text-[#374151] px-3 py-1.5 rounded-lg font-medium cursor-pointer transition-colors"
                     >
                       {sug}
                     </button>
@@ -702,72 +523,67 @@ export default function ScheduleView() {
               </div>
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex items-center gap-2.5 pt-2">
+              {editDocName && (
+                <button
+                  type="button"
+                  onClick={handleClearCell}
+                  className="min-h-[46px] px-4 py-2.5 rounded-xl border border-[#FECACA] text-[#DC2626] hover:bg-[#FEF2F2] text-sm font-medium cursor-pointer"
+                >
+                  Remover
+                </button>
+              )}
               <button
-                onClick={handleSaveCell}
-                className="flex-1 py-2 bg-[#2d8096] hover:bg-[#23677a] text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-              >
-                <Check size={14} />
-                <span>Salvar Alteração</span>
-              </button>
-              <button
+                type="button"
                 onClick={() => setEditingCell(null)}
-                className="px-4 py-2 border border-gray-200 text-gray-600 text-xs font-bold rounded-xl hover:bg-gray-50 cursor-pointer"
+                className="flex-1 min-h-[46px] py-2.5 border border-[#DCE2EA] text-[#4B5563] text-sm font-medium rounded-xl hover:bg-[#F7F8FA] cursor-pointer"
               >
                 Cancelar
               </button>
+              <button
+                type="submit"
+                className="flex-1 min-h-[46px] py-2.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Salvar
+              </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
-
-      {/* COLOR LEGEND FOOTER */}
-      <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 text-xs space-y-2">
-        <span className="font-bold text-gray-700 uppercase text-[10px] tracking-wider block">Legenda das Especialidades e Procedimentos:</span>
-        <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-          <span className="px-2.5 py-1 rounded-md bg-purple-100 text-purple-800 border border-purple-200">Cirurgia / Implante</span>
-          <span className="px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 border border-blue-200">Ortodontia (Orto)</span>
-          <span className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-200">Endodontia (Endo)</span>
-          <span className="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">Apenas Avaliação</span>
-          <span className="px-2.5 py-1 rounded-md bg-cyan-100 text-cyan-800 border border-cyan-200">Prótese / Coroa</span>
-        </div>
-      </div>
-
     </div>
   );
 
-  // Helper render for schedule cell
-  function renderScheduleCell(roomId: number, period: 'M' | 'T' | 'N', dayKey: DayKey, cell: ScheduleCell | null) {
+  function renderScheduleCell(
+    roomId: number,
+    roomName: string,
+    period: 'M' | 'T' | 'N',
+    dayKey: DayKey,
+    cell: ScheduleCell | null
+  ) {
     const isHighlighted = matchesFilter(cell);
-    const isFilteredActive = (filterDoctor !== 'TODOS' || filterProcedure !== 'TODOS' || searchTerm.trim() !== '');
+    const isFilteredActive = filterDoctor !== 'TODOS' || searchTerm.trim() !== '';
 
     return (
       <td
-        onClick={() => handleOpenCellEditor(roomId, period, dayKey, cell)}
-        className={`py-3.5 px-4 border-r border-gray-200 last:border-r-0 text-center align-middle transition-all relative ${
-          isEditing ? 'cursor-pointer hover:bg-amber-50/50' : ''
-        } ${
-          isFilteredActive && isHighlighted ? 'bg-amber-100/60 ring-2 ring-amber-400 font-bold' : ''
-        } ${
+        onClick={() => handleOpenCellEditor(roomId, roomName, period, dayKey, cell)}
+        className={`py-4 px-4 border-r border-[#ECEFF3] last:border-r-0 text-center align-middle transition-colors ${
+          isEditing ? 'cursor-pointer hover:bg-[#3795AE]/8' : ''
+        } ${isFilteredActive && isHighlighted ? 'bg-[#3795AE]/10' : ''} ${
           isFilteredActive && !isHighlighted && cell ? 'opacity-30' : ''
         }`}
       >
         {cell ? (
-          <div className="flex flex-col items-center justify-center space-y-1">
-            <div className="flex items-center gap-1">
-              <Stethoscope size={12} className="text-[#2d8096]" />
-              <span className="font-black text-gray-900 tracking-tight text-xs uppercase font-display">
-                {cell.doctor}
-              </span>
-            </div>
-            {cell.focus && (
-              <span className={`text-[9px] px-2 py-0.5 rounded-md border tracking-wider uppercase leading-tight ${getFocusBadgeStyle(cell.focus)}`}>
-                ({cell.focus})
-              </span>
-            )}
+          <div className="space-y-1">
+            <p className="font-semibold text-[#14181F] text-sm">{cell.doctor}</p>
+            {cell.focus && <p className="text-xs text-[#647082]">{cell.focus}</p>}
           </div>
+        ) : isEditing ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#3795AE] bg-[#3795AE]/8 px-3 py-1.5 rounded-lg">
+            <Plus size={14} />
+            <span>Definir dentista</span>
+          </span>
         ) : (
-          <span className="text-gray-300 font-bold text-xs select-none">- sem atendimento -</span>
+          <span className="text-xs text-[#94A0B2]">Livre</span>
         )}
       </td>
     );

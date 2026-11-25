@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -14,15 +14,13 @@ import {
   RefreshCw,
   ClipboardCheck,
   FlaskConical,
-  Wrench,
+  FileText,
   DollarSign,
   PanelLeftClose,
   PanelLeftOpen,
   X,
-  Building2,
-  ChevronDown,
-  Lock,
-  ShieldCheck
+  ShieldCheck,
+  CalendarDays
 } from 'lucide-react';
 import { UserRole, ROLE_LABELS } from '../lib/firebase';
 
@@ -94,6 +92,13 @@ export function ClinicLogo({ className = 'w-9 h-9' }: { className?: string }) {
   );
 }
 
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  badge: number;
+}
+
 export default function Sidebar({
   activeTab,
   setActiveTab,
@@ -107,34 +112,69 @@ export default function Sidebar({
   setMobileOpen,
   alertCounts = { compras: 0, sanitizacao: 0, laboratorio: 0 }
 }: SidebarProps) {
-  const [opsOpen, setOpsOpen] = useState(true);
   const clinicTitle = userInfo?.clinicName || 'Seja Mais Odontologia';
   const roleLabel = ROLE_LABELS[userRole];
   const displayName = userInfo?.displayName || roleLabel;
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(part => part[0]?.toUpperCase() || '')
-    .join('') || 'SM';
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map(part => part[0]?.toUpperCase() || '')
+      .join('') || 'SM';
 
-  const primaryItems = [
-    { id: 'visao-geral', label: 'Visão geral', icon: LayoutDashboard, badge: 0 },
-    { id: 'financeiro', label: 'Financeiro', icon: DollarSign, badge: 0 },
-    { id: 'doutora', label: 'Dentistas', icon: Stethoscope, badge: 0 },
-    { id: 'metas-equipe', label: 'Metas & equipe', icon: Users, badge: 0 },
-    { id: 'compras', label: 'Compras', icon: ShoppingCart, badge: alertCounts.compras }
-  ];
-
-  const operationsItems = [
-    { id: 'sanitizacao', label: 'Sanitização', icon: ClipboardCheck, badge: alertCounts.sanitizacao },
-    { id: 'laboratorio', label: 'Laboratório', icon: FlaskConical, badge: alertCounts.laboratorio },
-    { id: 'utilitarios', label: 'Utilitários', icon: Wrench, badge: 0 },
-    { id: 'historico', label: 'Histórico', icon: History, badge: 0 },
-    ...(userRole === 'gestao'
-      ? [{ id: 'acessos', label: 'Acessos', icon: ShieldCheck, badge: 0 }]
-      : [])
-  ];
+  // Only render tabs the logged-in user can actually use — zero confusing dead-end locked screens
+  const navGroups: { title?: string; items: NavItem[] }[] =
+    userRole === 'gestao'
+      ? [
+          {
+            title: 'Gestão',
+            items: [
+              { id: 'visao-geral', label: 'Início', icon: LayoutDashboard, badge: 0 },
+              { id: 'financeiro', label: 'Financeiro', icon: DollarSign, badge: 0 },
+              { id: 'doutora', label: 'Dentistas e escala', icon: Stethoscope, badge: 0 },
+              { id: 'metas-equipe', label: 'Metas e equipe', icon: Users, badge: 0 },
+              { id: 'historico', label: 'Histórico', icon: History, badge: 0 }
+            ]
+          },
+          {
+            title: 'Dia a dia da clínica',
+            items: [
+              { id: 'compras', label: 'Estoque e compras', icon: ShoppingCart, badge: alertCounts.compras },
+              { id: 'sanitizacao', label: 'Limpeza e sanitização', icon: ClipboardCheck, badge: alertCounts.sanitizacao },
+              { id: 'laboratorio', label: 'Laboratório', icon: FlaskConical, badge: alertCounts.laboratorio },
+              { id: 'utilitarios', label: 'Documentos e Pix', icon: FileText, badge: 0 }
+            ]
+          },
+          {
+            title: 'Equipe e sistema',
+            items: [{ id: 'acessos', label: 'Controle de acessos', icon: ShieldCheck, badge: 0 }]
+          }
+        ]
+      : userRole === 'dentista'
+      ? [
+          {
+            title: 'Minha rotina',
+            items: [
+              { id: 'doutora', label: 'Meu desempenho', icon: Stethoscope, badge: 0 },
+              { id: 'sanitizacao', label: 'Limpeza e sanitização', icon: ClipboardCheck, badge: alertCounts.sanitizacao },
+              { id: 'laboratorio', label: 'Laboratório', icon: FlaskConical, badge: alertCounts.laboratorio },
+              { id: 'utilitarios', label: 'Documentos e Pix', icon: FileText, badge: 0 }
+            ]
+          }
+        ]
+      : [
+          {
+            title: 'Minha rotina',
+            items: [
+              { id: 'compras', label: 'Estoque e compras', icon: ShoppingCart, badge: alertCounts.compras },
+              { id: 'doutora', label: 'Escala dos consultórios', icon: CalendarDays, badge: 0 },
+              { id: 'sanitizacao', label: 'Limpeza e sanitização', icon: ClipboardCheck, badge: alertCounts.sanitizacao },
+              { id: 'laboratorio', label: 'Laboratório', icon: FlaskConical, badge: alertCounts.laboratorio },
+              { id: 'utilitarios', label: 'Documentos e Pix', icon: FileText, badge: 0 }
+            ]
+          }
+        ];
 
   const isExpanded = !isCollapsed || mobileOpen;
 
@@ -143,221 +183,179 @@ export default function Sidebar({
     setMobileOpen(false);
   };
 
-  const renderNavItem = (item: { id: string; label: string; icon: React.ElementType; badge: number }) => {
+  const renderNavItem = (item: NavItem) => {
     const isActive = activeTab === item.id;
     const Icon = item.icon;
-    const isRestricted = !canAccessTab(userRole, item.id);
 
     return (
       <button
         key={item.id}
+        type="button"
         onClick={() => handleTabSelect(item.id)}
         title={!isExpanded ? item.label : undefined}
         className={`w-full flex items-center ${
-          !isExpanded ? 'justify-center px-2 py-2.5' : 'justify-between px-3 py-2'
-        } rounded-xl text-left transition-all duration-150 cursor-pointer min-h-[40px] ${
+          !isExpanded ? 'justify-center px-2 py-3' : 'justify-between px-3.5 py-2.5'
+        } rounded-xl text-left transition-colors duration-150 cursor-pointer min-h-[44px] ${
           isActive
-            ? 'bg-white text-[#18181B] font-semibold border border-[#EBEBED] shadow-[0_1px_2px_rgba(0,0,0,0.03)]'
-            : 'text-[#52525B] hover:text-[#18181B] hover:bg-[#EFEFF2]/80 border border-transparent'
+            ? 'bg-[#3795AE]/10 text-[#1F6F85] font-semibold'
+            : 'text-[#4B5563] hover:text-[#14181F] hover:bg-[#F1F4F7] font-medium'
         }`}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           <Icon
-            size={17}
+            size={19}
             strokeWidth={isActive ? 2.1 : 1.75}
-            className={`shrink-0 transition-colors ${isActive ? 'text-[#3795AE]' : 'text-[#71717A]'}`}
+            className={`shrink-0 transition-colors ${isActive ? 'text-[#3795AE]' : 'text-[#6B7280]'}`}
           />
           {isExpanded && (
-            <span className="text-[13.5px] tracking-[-0.01em] truncate">{item.label}</span>
+            <span className="text-[14px] tracking-[-0.01em] truncate whitespace-nowrap">{item.label}</span>
           )}
         </div>
 
-        {isExpanded && (
-          <div className="flex items-center gap-1.5 shrink-0">
-            {item.badge > 0 && (
-              <span className="min-w-[20px] h-5 px-1.5 rounded-md bg-[#EAEAEF] text-[#3F3F46] text-[11px] font-semibold tabular-nums flex items-center justify-center">
-                {item.badge}
-              </span>
-            )}
-            {isRestricted && (
-              <Lock size={13} className="text-[#A1A1AA]" aria-label="Acesso restrito para este perfil" />
-            )}
-          </div>
+        {isExpanded && item.badge > 0 && (
+          <span className="min-w-[22px] h-5 px-1.5 rounded-full bg-[#FEF2F2] text-[#DC2626] text-[11px] font-semibold tabular-nums flex items-center justify-center shrink-0">
+            {item.badge}
+          </span>
         )}
       </button>
     );
   };
 
   const navContent = (
-    <div className="flex flex-col h-full py-4 px-3 select-none">
+    <div className="flex flex-col h-full py-5 px-4 select-none">
       {/* Top Brand Header + Collapse Toggle */}
-      <div className={`flex items-center ${isExpanded ? 'justify-between px-1.5' : 'justify-center'} mb-4`}>
-        <div className="flex items-center gap-2.5 min-w-0">
-          <ClinicLogo className="w-8 h-8 shrink-0" />
+      <div className={`flex items-center ${isExpanded ? 'justify-between px-1' : 'justify-center'} mb-6`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <ClinicLogo className="w-9 h-9 shrink-0" />
           {isExpanded && (
-            <span className="font-display font-bold text-[16px] tracking-[-0.02em] text-[#18181B] truncate">
-              Seja Mais
-            </span>
+            <div className="min-w-0">
+              <span className="font-display font-bold text-[16px] tracking-[-0.02em] text-[#14181F] block truncate leading-tight">
+                Seja Mais
+              </span>
+              <span className="text-[12px] text-[#647082] block truncate leading-tight mt-0.5">
+                {clinicTitle}
+              </span>
+            </div>
           )}
         </div>
 
         {isExpanded && (
           <button
+            type="button"
             onClick={() => setIsCollapsed(prev => !prev)}
-            className="hidden md:flex w-7 h-7 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="hidden md:flex w-8 h-8 rounded-lg text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Recolher menu"
           >
-            <PanelLeftClose size={16} />
+            <PanelLeftClose size={17} />
           </button>
         )}
 
         <button
+          type="button"
           onClick={() => setMobileOpen(false)}
-          className="md:hidden w-8 h-8 rounded-lg text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] flex items-center justify-center transition-colors shrink-0"
+          className="md:hidden w-9 h-9 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors shrink-0"
           title="Fechar menu"
         >
-          <X size={18} />
+          <X size={20} />
         </button>
       </div>
 
       {!isExpanded && (
-        <div className="hidden md:flex justify-center mb-3">
+        <div className="hidden md:flex justify-center mb-4">
           <button
+            type="button"
             onClick={() => setIsCollapsed(false)}
-            className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors cursor-pointer"
             title="Expandir menu"
           >
-            <PanelLeftOpen size={17} />
+            <PanelLeftOpen size={18} />
           </button>
         </div>
       )}
 
-      {/* Clinic Context Card (Mirrors Workspace Switcher) */}
-      {isExpanded ? (
-        <div className="mb-4 px-1">
-          <div className="flex items-center gap-2.5 bg-[#EFEFF2]/75 border border-[#E4E4E7]/80 px-3 py-2 rounded-xl">
-            <div className="w-6 h-6 rounded-md bg-white border border-[#E4E4E7] flex items-center justify-center text-[#3795AE] shrink-0">
-              <Building2 size={13} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] font-semibold text-[#18181B] truncate leading-tight">
-                {clinicTitle}
+      {/* Navigation Groups */}
+      <nav className="flex-1 overflow-y-auto space-y-6 pr-0.5">
+        {navGroups.map((group, idx) => (
+          <div key={group.title || idx} className="space-y-1">
+            {isExpanded && group.title && (
+              <p className="px-3.5 pb-1 text-[12px] font-medium text-[#8A94A6]">
+                {group.title}
               </p>
-              <p className="text-[11px] text-[#71717A] leading-tight mt-0.5">
-                Unidade Principal · {roleLabel}
-              </p>
-            </div>
+            )}
+            <div className="space-y-1">{group.items.map(renderNavItem)}</div>
           </div>
-        </div>
-      ) : (
-        <div className="mb-4 flex justify-center">
-          <div
-            className="w-9 h-9 rounded-xl bg-[#EFEFF2]/80 border border-[#E4E4E7]/80 flex items-center justify-center text-[#3795AE]"
-            title={`${clinicTitle} · ${roleLabel}`}
-          >
-            <Building2 size={15} />
-          </div>
-        </div>
-      )}
-
-      {/* Navigation Links */}
-      <nav className="flex-1 overflow-y-auto space-y-5 px-0.5">
-        {/* Primary Group */}
-        <div className="space-y-1">
-          {primaryItems.map(renderNavItem)}
-        </div>
-
-        {/* Hairline Divider */}
-        <div className="border-t border-[#ECECEE] mx-1.5" />
-
-        {/* Clinical Operations Group */}
-        <div className="space-y-1">
-          {isExpanded && (
-            <button
-              type="button"
-              onClick={() => setOpsOpen(prev => !prev)}
-              className="w-full flex items-center justify-between px-3 py-1 text-[11.5px] font-medium text-[#71717A] hover:text-[#18181B] transition-colors cursor-pointer"
-            >
-              <span>Operações clínicas</span>
-              <ChevronDown
-                size={13}
-                className={`transition-transform duration-150 ${opsOpen ? 'rotate-0' : '-rotate-90'}`}
-              />
-            </button>
-          )}
-          {(opsOpen || !isExpanded) && (
-            <div className="space-y-1">
-              {operationsItems.map(renderNavItem)}
-            </div>
-          )}
-        </div>
+        ))}
       </nav>
 
-      {/* Bottom Profile & Session Card */}
-      <div className="mt-auto pt-3">
+      {/* Quiet Bottom Profile & Session Area */}
+      <div className="mt-auto pt-5 border-t border-[#ECEFF3]">
         {isExpanded ? (
-          <div className="bg-white border border-[#EBEBED] rounded-2xl p-3 space-y-2.5">
-            <div className="flex items-center gap-2.5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 px-1">
               {userInfo?.photoURL ? (
                 <img
                   src={userInfo.photoURL}
                   alt={displayName}
                   referrerPolicy="no-referrer"
-                  className="w-8 h-8 rounded-full object-cover border border-[#EBEBED] shrink-0"
+                  className="w-9 h-9 rounded-full object-cover border border-[#E6EAF0] shrink-0"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-[#3795AE]/10 text-[#3795AE] border border-[#3795AE]/15 flex items-center justify-center font-semibold text-xs shrink-0">
+                <div className="w-9 h-9 rounded-full bg-[#3795AE]/12 text-[#2B7E94] flex items-center justify-center font-semibold text-xs shrink-0">
                   {initials}
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-[#18181B] truncate leading-tight">
+                <p className="text-[13.5px] font-semibold text-[#14181F] truncate leading-tight">
                   {displayName}
                 </p>
-                <p className="text-[11px] text-[#71717A] truncate leading-tight mt-0.5">
-                  {userInfo?.email || roleLabel}
+                <p className="text-[12px] text-[#647082] truncate leading-tight mt-0.5">
+                  {roleLabel}
                 </p>
               </div>
             </div>
 
-            <div className="border-t border-[#F1F1F3] pt-2 space-y-1">
+            <div className="space-y-1">
               {userRole === 'gestao' && (
                 <button
+                  type="button"
                   onClick={onResetData}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium text-[#52525B] hover:text-[#18181B] hover:bg-[#F4F4F6] transition-colors cursor-pointer"
-                  title="Restaurar dados iniciais"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] transition-colors cursor-pointer min-h-[40px]"
+                  title="Zerar todos os dados"
                 >
-                  <RefreshCw size={14} className="text-[#71717A]" />
-                  <span>Restaurar dados</span>
+                  <RefreshCw size={15} className="text-[#8A94A6]" />
+                  <span>Zerar dados</span>
                 </button>
               )}
               <button
+                type="button"
                 onClick={onLogout}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[12px] font-medium text-[#52525B] hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-medium text-[#647082] hover:text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer min-h-[40px]"
                 title="Sair da conta"
               >
-                <LogOut size={14} className="text-[#71717A]" />
-                <span>Sair</span>
+                <LogOut size={15} className="text-[#8A94A6]" />
+                <span>Sair da conta</span>
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-1.5 pt-2 border-t border-[#ECECEE]">
+          <div className="flex flex-col items-center gap-2">
             {userRole === 'gestao' && (
               <button
+                type="button"
                 onClick={onResetData}
-                className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#18181B] hover:bg-[#EFEFF2] flex items-center justify-center transition-colors cursor-pointer"
-                title="Restaurar dados iniciais"
+                className="w-10 h-10 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center transition-colors cursor-pointer"
+                title="Zerar todos os dados"
               >
-                <RefreshCw size={16} />
+                <RefreshCw size={17} />
               </button>
             )}
             <button
+              type="button"
               onClick={onLogout}
-              className="w-9 h-9 rounded-xl text-[#71717A] hover:text-[#DC2626] hover:bg-[#FEF2F2] flex items-center justify-center transition-colors cursor-pointer"
+              className="w-10 h-10 rounded-xl text-[#647082] hover:text-[#DC2626] hover:bg-[#FEF2F2] flex items-center justify-center transition-colors cursor-pointer"
               title="Sair da conta"
             >
-              <LogOut size={16} />
+              <LogOut size={17} />
             </button>
           </div>
         )}
@@ -369,8 +367,8 @@ export default function Sidebar({
     <>
       {/* DESKTOP FULL-HEIGHT SIDEBAR */}
       <aside
-        className={`hidden md:flex fixed left-0 top-0 h-screen bg-[#F7F7F8] border-r border-[#ECECEE] flex-col z-30 transition-all duration-200 ease-out ${
-          isCollapsed ? 'w-[72px]' : 'w-64'
+        className={`hidden md:flex fixed left-0 top-0 h-screen bg-white border-r border-[#E6EAF0] flex-col z-30 transition-all duration-200 ease-out ${
+          isCollapsed ? 'w-[76px]' : 'w-[264px]'
         }`}
       >
         {navContent}
@@ -380,13 +378,13 @@ export default function Sidebar({
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-200"
+          className="fixed inset-0 bg-[#14181F]/35 backdrop-blur-[2px] z-40 md:hidden transition-opacity duration-200"
         />
       )}
 
       {/* MOBILE SIDEBAR DRAWER */}
       <aside
-        className={`fixed top-0 left-0 h-[100dvh] w-[min(18rem,85vw)] bg-[#F7F7F8] border-r border-[#ECECEE] z-50 transform transition-transform duration-200 ease-out md:hidden shadow-xl ${
+        className={`fixed top-0 left-0 h-[100dvh] w-[min(18.5rem,86vw)] bg-white border-r border-[#E6EAF0] z-50 transform transition-transform duration-200 ease-out md:hidden shadow-xl ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >

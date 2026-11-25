@@ -158,7 +158,7 @@ export default function Utilities({ doctors }: UtilitiesProps) {
   const [reciboPatientCPF, setReciboPatientCPF] = useState('');
   const [reciboAmount, setReciboAmount] = useState('');
   const [reciboDescription, setReciboDescription] = useState('Tratamento Odontológico Integrado');
-  const [reciboDoctor, setReciboDoctor] = useState(doctors[0]?.name || 'Dra. Ana Silva');
+  const [reciboDoctor, setReciboDoctor] = useState(doctors[0]?.name || '');
   const [reciboPaymentMethod, setReciboPaymentMethod] = useState('Pix');
   const [reciboPatientPhone, setReciboPatientPhone] = useState('');
 
@@ -199,8 +199,8 @@ export default function Utilities({ doctors }: UtilitiesProps) {
   const [docType, setDocType] = useState<'atestado' | 'declaracao'>('atestado');
   const [docPatientName, setDocPatientName] = useState('');
   const [docPatientCPF, setDocPatientCPF] = useState('');
-  const [docDoctorName, setDocDoctorName] = useState(doctors[0]?.name || 'Dra. Ana Silva');
-  const [docDoctorCRO, setDocDoctorCRO] = useState('CRO-SP 123.456');
+  const [docDoctorName, setDocDoctorName] = useState(doctors[0]?.name || '');
+  const [docDoctorCRO, setDocDoctorCRO] = useState('');
   const [docDate, setDocDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [docRestDays, setDocRestDays] = useState('1');
   const [docStartTime, setDocStartTime] = useState('09:00');
@@ -281,7 +281,7 @@ export default function Utilities({ doctors }: UtilitiesProps) {
   const [tcleProcedure, setTcleProcedure] = useState<'siso' | 'implante' | 'canal' | 'orto' | 'clareamento' | 'protese'>('siso');
   const [tclePatientName, setTclePatientName] = useState('');
   const [tclePatientCPF, setTclePatientCPF] = useState('');
-  const [tcleDoctorName, setTcleDoctorName] = useState(doctors[0]?.name || 'Dra. Ana Silva');
+  const [tcleDoctorName, setTcleDoctorName] = useState(doctors[0]?.name || '');
 
   const TCLE_TEMPLATES = {
     siso: {
@@ -318,77 +318,77 @@ export default function Utilities({ doctors }: UtilitiesProps) {
     <div className="space-y-6 max-w-[1400px] mx-auto w-full select-none pb-12">
       
       {/* Header Banner */}
-      <div className="bg-white p-5 rounded-2xl border border-level-2 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#2d8096]/10 text-[#2d8096] flex items-center justify-center font-bold shadow-2xs">
-            <Sparkles size={22} />
+      <div className="bg-white p-5 rounded-2xl border border-[#E6EAF0] flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+            <Sparkles size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-black font-display text-gray-900 tracking-tight">Central de Utilitários e Ferramentas</h2>
-            <p className="text-xs text-gray-500 font-medium">Recursos rápidos e indispensáveis para a rotina da recepção e clínica</p>
+            <h2 className="text-base font-semibold font-display text-[#14181F]">Documentos e cobranças</h2>
+            <p className="text-sm text-[#647082]">Escolha a ferramenta que precisa usar para atender o paciente</p>
           </div>
         </div>
 
         {/* Sub-Tabs Selector Bar */}
-        <div className="flex items-center gap-1 bg-level-1 p-1 rounded-xl w-full md:w-auto overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1.5 bg-[#F1F4F7] p-1.5 rounded-xl w-full lg:w-auto overflow-x-auto scrollbar-none">
           <button
             onClick={() => setActiveSubTab('pix')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-[42px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               activeSubTab === 'pix'
-                ? 'bg-white text-[#2d8096] shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <QrCode size={15} />
-            <span>Pix Copia e Cola</span>
+            <QrCode size={16} className={activeSubTab === 'pix' ? 'text-[#3795AE]' : ''} />
+            <span>Cobrança Pix</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('recibo')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-[42px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               activeSubTab === 'recibo'
-                ? 'bg-white text-[#2d8096] shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <Receipt size={15} />
-            <span>Emitir Recibo</span>
+            <Receipt size={16} className={activeSubTab === 'recibo' ? 'text-[#3795AE]' : ''} />
+            <span>Recibo</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('atestado')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-[42px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               activeSubTab === 'atestado'
-                ? 'bg-white text-[#2d8096] shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <FileText size={15} />
-            <span>Atestado / Declaração</span>
+            <FileText size={16} className={activeSubTab === 'atestado' ? 'text-[#3795AE]' : ''} />
+            <span>Atestado</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('calculadora')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-[42px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               activeSubTab === 'calculadora'
-                ? 'bg-white text-[#2d8096] shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <Calculator size={15} />
-            <span>Calculadora Parcelas</span>
+            <Calculator size={16} className={activeSubTab === 'calculadora' ? 'text-[#3795AE]' : ''} />
+            <span>Parcelas</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('tcle')}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-[42px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               activeSubTab === 'tcle'
-                ? 'bg-white text-[#2d8096] shadow-xs'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <ShieldCheck size={15} />
-            <span>Gerador TCLE</span>
+            <ShieldCheck size={16} className={activeSubTab === 'tcle' ? 'text-[#3795AE]' : ''} />
+            <span>Termo</span>
           </button>
         </div>
       </div>
@@ -399,10 +399,10 @@ export default function Utilities({ doctors }: UtilitiesProps) {
       {activeSubTab === 'pix' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
           {/* Form Side */}
-          <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-level-2 shadow-xs space-y-5">
-            <div className="flex items-center gap-2 border-b border-gray-100 pb-3">
-              <QrCode size={18} className="text-[#2d8096]" />
-              <h3 className="font-display font-bold text-sm text-gray-900 uppercase">Gerar Cobrança Pix para o Paciente</h3>
+          <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-[#E6EAF0] space-y-5">
+            <div className="flex items-center gap-2.5 border-b border-[#EEF2F6] pb-3.5">
+              <QrCode size={18} className="text-[#3795AE]" />
+              <h3 className="font-display font-semibold text-base text-[#14181F]">Gerar cobrança Pix para o paciente</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

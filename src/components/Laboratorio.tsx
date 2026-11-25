@@ -44,88 +44,7 @@ interface LaboratorioProps {
   doctors: Doctor[];
 }
 
-const INITIAL_LAB_PROCEDURES: LabProcedure[] = [
-  {
-    id: 'lab-1',
-    patientName: 'Roberto Alencar',
-    procedureType: 'Coroa',
-    laboratoryName: 'Premium Dental Lab',
-    sentDate: '2026-07-10',
-    expectedReturnDate: '2026-07-20',
-    doctorName: 'Dra. Camila Souza',
-    status: 'No Laboratório',
-    value: 450,
-    notes: 'Coroa metalocerâmica dente 36.',
-    shade: 'A2'
-  },
-  {
-    id: 'lab-2',
-    patientName: 'Maria Antônia',
-    procedureType: 'Faceta',
-    laboratoryName: 'Estética Oral Lab',
-    sentDate: '2026-07-15',
-    expectedReturnDate: '2026-07-24',
-    doctorName: 'Dra. Beatriz Lima',
-    status: 'No Laboratório',
-    value: 1200,
-    notes: '4 facetas em cerâmica nos dentes 12, 11, 21, 22. Cimentação agendada.',
-    shade: 'A1 (E-Max)'
-  },
-  {
-    id: 'lab-3',
-    patientName: 'Carlos Eduardo',
-    procedureType: 'Implante',
-    laboratoryName: 'Titanium Pro Lab',
-    sentDate: '2026-07-01',
-    expectedReturnDate: '2026-07-12',
-    actualReturnDate: '2026-07-10',
-    doctorName: 'Dra. Camila Souza',
-    status: 'Recebido',
-    value: 850,
-    notes: 'Pilar e coroa sobre implante dente 46. Validação clínica OK.',
-    shade: 'A3'
-  },
-  {
-    id: 'lab-4',
-    patientName: 'Juliana Paes',
-    procedureType: 'Prótese',
-    laboratoryName: 'Art & Dente Próteses',
-    sentDate: '2026-07-16',
-    expectedReturnDate: '2026-07-28',
-    doctorName: 'Dra. Fernanda Costa',
-    status: 'A Enviar',
-    value: 600,
-    notes: 'Prótese parcial removível superior. Enviar modelo com grampos.',
-    shade: 'Bleach BL2'
-  },
-  {
-    id: 'lab-5',
-    patientName: 'Pedro Cavalcanti',
-    procedureType: 'Onlay/Inlay',
-    laboratoryName: 'Premium Dental Lab',
-    sentDate: '2026-06-25',
-    expectedReturnDate: '2026-07-05',
-    actualReturnDate: '2026-07-04',
-    doctorName: 'Dra. Fernanda Costa',
-    status: 'Instalado',
-    value: 350,
-    notes: 'Onlay em cerômero dente 26 cimentada. Paciente satisfeito.',
-    shade: 'A2'
-  },
-  {
-    id: 'lab-6',
-    patientName: 'Gisela Prado',
-    procedureType: 'Placa Alinhadora/Miorrelaxante',
-    laboratoryName: 'OrthoAligner Tech',
-    sentDate: '2026-07-02',
-    expectedReturnDate: '2026-07-11',
-    doctorName: 'Dra. Beatriz Lima',
-    status: 'Ajuste',
-    value: 280,
-    notes: 'Placa miorrelaxante para bruxismo dente superior. Ajustar oclusão dente 16.',
-    shade: 'Transparente'
-  }
-];
+const INITIAL_LAB_PROCEDURES: LabProcedure[] = [];
 
 const COLUMNS: { id: LabProcedure['status']; label: string; bg: string; border: string; text: string; ring: string }[] = [
   { id: 'A Enviar', label: 'A Enviar (Moldagem)', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', ring: 'ring-slate-400' },
@@ -153,9 +72,9 @@ export default function Laboratorio({ doctors }: LaboratorioProps) {
 
   // Form states
   const [patientName, setPatientName] = useState('');
-  const [termoPatientName, setTermoPatientName] = useState('Juliana Paes');
-  const [termoProsthesisType, setTermoProsthesisType] = useState('Prótese Parcial Removível Superior');
-  const [termoDoctorName, setTermoDoctorName] = useState('Dra. Karen Borba');
+  const [termoPatientName, setTermoPatientName] = useState('');
+  const [termoProsthesisType, setTermoProsthesisType] = useState('');
+  const [termoDoctorName, setTermoDoctorName] = useState(doctors[0]?.name || '');
   const [termoDate, setTermoDate] = useState(new Date().toLocaleDateString('pt-BR'));
   const [isGeneratingTermoPDF, setIsGeneratingTermoPDF] = useState(false);
   const [isSendingTermoWhatsApp, setIsSendingTermoWhatsApp] = useState(false);
@@ -251,11 +170,11 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!patientName.trim() || !laboratoryName.trim() || !sentDate || !expectedReturnDate) {
-      alert("Por favor, preencha todos os campos obrigatórios.");
+      showToast('Preencha o nome do paciente, laboratório e as datas antes de salvar.');
       return;
     }
 
-    const defaultDoctor = doctorName || (doctors[0] ? doctors[0].name : 'Dra. Camila Souza');
+    const defaultDoctor = doctorName || (doctors[0] ? doctors[0].name : 'Clínica');
 
     const newProcedure: LabProcedure = {
       id: 'lab-' + Math.random().toString(36).substr(2, 9),
@@ -352,7 +271,7 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
     sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
     setExpectedReturnDate(sevenDaysLater.toISOString().split('T')[0]);
     setActualReturnDate('');
-    setDoctorName(doctors[0] ? doctors[0].name : 'Dra. Camila Souza');
+    setDoctorName(doctors[0] ? doctors[0].name : '');
     setStatus('A Enviar');
     setValue('');
     setNotes('');
@@ -928,33 +847,28 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
       </AnimatePresence>
 
       {/* HEADER WITH ACTION BUTTONS */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="font-display font-semibold text-base text-[#18181B] flex items-center gap-2">
-            <FlaskConical className="text-[#3795AE]" size={18} />
-            <span>Painel de laboratório (Kanban)</span>
-          </h2>
-          <p className="text-xs text-[#71717A] mt-0.5">
-            Prazos e controle financeiro de próteses, facetas e peças enviadas para produção
-          </p>
+      <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+            <FlaskConical size={20} />
+          </div>
+          <div>
+            <h2 className="font-display font-semibold text-base text-[#14181F]">
+              Acompanhamento de laboratório
+            </h2>
+            <p className="text-sm text-[#647082] mt-0.5">
+              Veja em que etapa está cada prótese, coroa ou faceta e acompanhe os prazos
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-          <button
-            onClick={handleResetLabData}
-            className="bg-white border border-[#E4E4E7] hover:bg-[#FAFAFA] text-[#52525B] font-medium text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Restaurar dados padrão de laboratório"
-          >
-            <RefreshCw size={13} />
-            Restaurar
-          </button>
-
+        <div className="flex gap-2.5 shrink-0 flex-wrap">
           <button
             onClick={generateFilteredReportPDF}
-            className="bg-white border border-[#E4E4E7] hover:border-[#3795AE]/40 text-[#3F3F46] hover:text-[#3795AE] font-medium text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="min-h-[44px] bg-white border border-[#D9E0E8] hover:bg-[#F7F9FB] text-[#14181F] font-medium text-sm px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
             title="Exportar relatório de todos os trabalhos visíveis em PDF"
           >
-            <FileDown size={13} />
+            <FileDown size={16} className="text-[#3795AE]" />
             Exportar PDF
           </button>
 
@@ -973,11 +887,11 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
               setTermoDate(new Date().toLocaleDateString('pt-BR'));
               setShowTermoModal(true);
             }}
-            className="bg-white border border-[#E4E4E7] hover:border-[#3795AE]/40 text-[#3F3F46] hover:text-[#3795AE] font-medium text-xs px-3 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="min-h-[44px] bg-white border border-[#D9E0E8] hover:bg-[#F7F9FB] text-[#14181F] font-medium text-sm px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
             title="Gerar termo de entrega de prótese para assinatura do paciente"
           >
-            <Clipboard size={13} />
-            Termo de satisfação
+            <Clipboard size={16} className="text-[#3795AE]" />
+            Termo de entrega
           </button>
 
           <button
@@ -985,144 +899,126 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
               clearForm();
               setShowAddModal(true);
             }}
-            className="bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="min-h-[44px] bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold text-sm px-4 py-2 rounded-xl flex items-center gap-2 transition-colors cursor-pointer"
           >
-            <Plus size={14} />
-            Nova peça
+            <Plus size={16} />
+            Novo envio
           </button>
         </div>
       </div>
 
       {/* KPI METRIC CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 flex items-center gap-3.5">
-          <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
-            <FlaskConical size={17} />
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+            <FlaskConical size={20} />
           </div>
           <div>
-            <p className="text-xs text-[#71717A] font-medium">No laboratório</p>
-            <p className="font-display font-semibold text-lg text-[#18181B] tabular-nums">{totalInProduction} peças</p>
-            <p className="text-[11px] text-[#71717A]">Em confecção externa</p>
+            <p className="text-xs text-[#647082] font-medium">No laboratório</p>
+            <p className="font-display font-semibold text-xl text-[#14181F] tabular-nums mt-0.5">{totalInProduction}</p>
+            <p className="text-xs text-[#647082]">Em produção</p>
           </div>
         </div>
 
-        <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 flex items-center gap-3.5">
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 flex items-center gap-4">
           <div
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              delayedCount > 0 ? 'bg-[#FEF2F2] text-[#DC2626]' : 'bg-[#F4F4F6] text-[#71717A]'
+            className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+              delayedCount > 0 ? 'bg-[#FEF2F2] text-[#DC2626]' : 'bg-[#F1F4F7] text-[#647082]'
             }`}
           >
-            <AlertTriangle size={17} />
+            <AlertTriangle size={20} />
           </div>
           <div>
-            <p className="text-xs text-[#71717A] font-medium">Atrasados</p>
-            <p className={`font-display font-semibold text-lg tabular-nums ${delayedCount > 0 ? 'text-[#DC2626]' : 'text-[#18181B]'}`}>
-              {delayedCount} {delayedCount === 1 ? 'peça' : 'peças'}
+            <p className="text-xs text-[#647082] font-medium">Atrasados</p>
+            <p className={`font-display font-semibold text-xl tabular-nums mt-0.5 ${delayedCount > 0 ? 'text-[#DC2626]' : 'text-[#14181F]'}`}>
+              {delayedCount}
             </p>
-            <p className="text-[11px] text-[#71717A]">
-              {delayedCount > 0 ? 'Excederam a previsão' : 'Dentro do prazo'}
+            <p className="text-xs text-[#647082]">
+              {delayedCount > 0 ? 'Passou da previsão' : 'Tudo no prazo'}
             </p>
           </div>
         </div>
 
-        {/* Metric 3 */}
-        <div className="bg-white border border-level-2 rounded-xl p-4 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#ECFDF5] text-[#15803D] flex items-center justify-center shrink-0">
             <CheckCircle2 size={20} />
           </div>
           <div>
-            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Recebidos Clínica</p>
-            <p className="font-display font-bold text-lg text-on-surface mt-0.5">{receivedThisMonth} pendentes</p>
-            <p className="text-[9px] text-on-surface-variant mt-0.5 font-medium">Aguardando cimentação final</p>
+            <p className="text-xs text-[#647082] font-medium">Recebidos na clínica</p>
+            <p className="font-display font-semibold text-xl text-[#14181F] tabular-nums mt-0.5">{receivedThisMonth}</p>
+            <p className="text-xs text-[#647082]">Prontos para instalar</p>
           </div>
         </div>
 
-        {/* Metric 4 */}
-        <div className="bg-white border border-level-2 rounded-xl p-4 shadow-xs flex items-center gap-4">
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-[#F1F4F7] text-[#3795AE] flex items-center justify-center shrink-0">
             <DollarSign size={20} />
           </div>
           <div>
-            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">Custo de Próteses</p>
-            <p className="font-display font-bold text-lg text-on-surface mt-0.5">
+            <p className="text-xs text-[#647082] font-medium">Custo total</p>
+            <p className="font-display font-semibold text-xl text-[#14181F] tabular-nums mt-0.5">
               R$ {totalValueFiltered.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
-            <p className="text-[9px] text-on-surface-variant mt-0.5 font-medium">Custo acumulado total das peças</p>
+            <p className="text-xs text-[#647082]">Soma dos trabalhos</p>
           </div>
         </div>
-
       </div>
 
       {/* FILTER BAR PANEL */}
-      <section className="bg-white border border-level-2 rounded-xl p-4 shadow-xs">
-        <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
-          
+      <section className="bg-white border border-[#E6EAF0] rounded-2xl p-4">
+        <div className="flex flex-col lg:flex-row gap-3.5 justify-between items-stretch lg:items-center">
           {/* Left search */}
           <div className="relative flex-1 max-w-md">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-on-surface-variant">
-              <Search size={15} />
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-[#94A3B8]">
+              <Search size={16} />
             </span>
             <input
               type="text"
-              placeholder="Pesquisar por paciente, laboratório ou observação..."
+              placeholder="Buscar por paciente, laboratório ou observação..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-level-1/40 border border-level-2 rounded-lg pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 text-on-surface placeholder:text-on-surface-variant font-medium"
+              className="w-full min-h-[44px] bg-[#F7F9FB] border border-[#D9E0E8] rounded-xl pl-10 pr-4 py-2 text-sm text-[#14181F] placeholder:text-[#94A3B8] focus:bg-white focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
             />
           </div>
 
           {/* Right Dropdowns */}
           <div className="flex flex-wrap gap-2.5 items-center">
-            <div className="flex items-center gap-1.5">
-              <Filter size={13} className="text-on-surface-variant" />
-              <span className="text-[11px] text-on-surface-variant font-bold uppercase">Filtros:</span>
-            </div>
+            <select
+              value={doctorFilter}
+              onChange={(e) => setDoctorFilter(e.target.value)}
+              className="min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl py-2 px-3.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
+            >
+              <option value="Todos">Todas as dentistas</option>
+              {doctors.map(d => (
+                <option key={d.id} value={d.name}>{d.name}</option>
+              ))}
+            </select>
 
-            {/* Doctor Filter */}
-            <div>
-              <select
-                value={doctorFilter}
-                onChange={(e) => setDoctorFilter(e.target.value)}
-                className="bg-white border border-level-2 rounded-lg py-1.5 px-3 text-[11px] font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="Todos">Todos Dentistas</option>
-                {doctors.map(d => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl py-2 px-3.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
+            >
+              <option value="Todos">Todos os tipos</option>
+              <option value="Prótese">Prótese</option>
+              <option value="Coroa">Coroa</option>
+              <option value="Faceta">Faceta</option>
+              <option value="Implante">Implante</option>
+              <option value="Onlay/Inlay">Onlay/Inlay</option>
+              <option value="Placa Alinhadora/Miorrelaxante">Placa / Alinhador</option>
+              <option value="Outro">Outros</option>
+            </select>
 
-            {/* Type Filter */}
-            <div>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                className="bg-white border border-level-2 rounded-lg py-1.5 px-3 text-[11px] font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="Todos">Todos Procedimentos</option>
-                <option value="Prótese">Prótese</option>
-                <option value="Coroa">Coroa</option>
-                <option value="Faceta">Faceta</option>
-                <option value="Implante">Implante</option>
-                <option value="Onlay/Inlay">Onlay/Inlay</option>
-                <option value="Placa Alinhadora/Miorrelaxante">Placa/Alinhador</option>
-                <option value="Outro">Outros</option>
-              </select>
-            </div>
-
-            {/* Laboratory Filter */}
-            <div>
-              <select
-                value={laboratoryFilter}
-                onChange={(e) => setLaboratoryFilter(e.target.value)}
-                className="bg-white border border-level-2 rounded-lg py-1.5 px-3 text-[11px] font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="Todos">Todos Laboratórios</option>
-                {uniqueLaboratories.map((lab, idx) => (
-                  <option key={idx} value={lab}>{lab}</option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={laboratoryFilter}
+              onChange={(e) => setLaboratoryFilter(e.target.value)}
+              className="min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl py-2 px-3.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
+            >
+              <option value="Todos">Todos os laboratórios</option>
+              {uniqueLaboratories.map((lab, idx) => (
+                <option key={idx} value={lab}>{lab}</option>
+              ))}
+            </select>
 
             {(doctorFilter !== 'Todos' || typeFilter !== 'Todos' || laboratoryFilter !== 'Todos' || searchTerm !== '') && (
               <button
@@ -1132,16 +1028,38 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
                   setLaboratoryFilter('Todos');
                   setSearchTerm('');
                 }}
-                className="text-xs text-primary hover:underline font-bold"
+                className="min-h-[44px] px-3 text-sm text-[#1F6F85] hover:underline font-medium cursor-pointer"
               >
-                Limpar
+                Limpar filtros
               </button>
             )}
-
           </div>
-
         </div>
       </section>
+
+      {procedures.length === 0 && (
+        <div className="bg-white border border-[#E6EAF0] rounded-2xl p-10 text-center flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center">
+            <FlaskConical size={26} />
+          </div>
+          <div className="max-w-md space-y-1.5">
+            <h3 className="font-display text-lg font-semibold text-[#14181F]">Nenhum trabalho de laboratório cadastrado</h3>
+            <p className="text-sm text-[#647082]">
+              Registre a primeira prótese, coroa ou faceta enviada ao laboratório para acompanhar os prazos e o andamento em cada etapa.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              clearForm();
+              setShowAddModal(true);
+            }}
+            className="min-h-[46px] px-6 py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold inline-flex items-center gap-2 transition-colors cursor-pointer"
+          >
+            <Plus size={16} />
+            Cadastrar primeiro envio
+          </button>
+        </div>
+      )}
 
       {/* KANBAN BOARD CONTAINER */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-start min-h-[600px] select-none">
@@ -1222,7 +1140,7 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
 
                           <div className="flex items-center justify-between mt-0.5">
                             <div className="flex flex-wrap gap-1">
-                              <span className="bg-[#3795AE]/10 text-[#3795AE] font-bold text-[9px] px-1.5 py-0.5 rounded-full">
+                              <span className="bg-[#3795AE]/10 text-[#3795AE] font-bold text-[9px] px-1.5 py-0.5 rounded-md">
                                 {proc.procedureType}
                               </span>
                               <span className="bg-level-1 text-on-surface-variant font-medium text-[9px] px-1 py-0.5 rounded">
@@ -1914,7 +1832,7 @@ Agradecemos pela preferência e cuidado com sua saúde bucal!`;
                       <p className="text-[8px] text-gray-400 pl-0.5 mt-1">Rua Vergueiro, 1200 • Paraíso, São Paulo - SP • CEP 01504-001</p>
                     </div>
                     <div className="text-right">
-                      <span className="text-[9px] font-bold text-gray-900 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                      <span className="text-[9px] font-bold text-gray-900 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md uppercase tracking-wider">
                         Documento Oficial
                       </span>
                     </div>

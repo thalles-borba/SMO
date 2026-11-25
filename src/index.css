@@ -1,31 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  /* Minimalist Neutral Base + Clinical Petrol Accent (#3795AE) */
-  --color-background: #FAFAFA;
-  --color-on-background: #18181B;
+  /* Calm, Airy Clinical Neutral Canvas + Petrol Accent (#3795AE) */
+  --color-background: #F7F8FA;
+  --color-on-background: #14181F;
 
-  --color-surface-dim: #EAEAEF;
+  --color-surface-dim: #ECEFF3;
   --color-surface-bright: #FFFFFF;
   --color-surface-container-lowest: #FFFFFF;
-  --color-surface-container-low: #F7F7F8;
-  --color-surface-container: #F2F2F4;
-  --color-surface-container-high: #EAEAEF;
-  --color-surface-container-highest: #E4E4E7;
-  --color-surface-variant: #E4E4E7;
+  --color-surface-container-low: #F8FAFC;
+  --color-surface-container: #F1F4F7;
+  --color-surface-container-high: #E8ECF1;
+  --color-surface-container-highest: #DDE3EA;
+  --color-surface-variant: #E4E8EE;
 
-  --color-on-surface: #18181B;
-  --color-on-surface-variant: #71717A;
-  --color-inverse-surface: #18181B;
-  --color-inverse-on-surface: #FAFAFA;
+  --color-on-surface: #14181F;
+  --color-on-surface-variant: #647082;
+  --color-inverse-surface: #14181F;
+  --color-inverse-on-surface: #F7F8FA;
 
-  --color-outline: #A1A1AA;
-  --color-outline-variant: #E4E4E7;
+  --color-outline: #94A0B2;
+  --color-outline-variant: #E6EAF0;
 
   /* Signature Clinical Accent (10% Budget) */
   --color-surface-tint: #3795AE;
@@ -35,10 +35,10 @@
   --color-on-primary-container: #FFFFFF;
   --color-inverse-primary: #7BD2ED;
 
-  --color-secondary: #52525B;
+  --color-secondary: #4B5563;
   --color-on-secondary: #FFFFFF;
-  --color-secondary-container: #F4F4F6;
-  --color-on-secondary-container: #3F3F46;
+  --color-secondary-container: #F1F4F7;
+  --color-on-secondary-container: #374151;
 
   --color-tertiary: #D97706;
   --color-on-tertiary: #FFFFFF;
@@ -51,12 +51,19 @@
   --color-on-error-container: #991B1B;
 
   /* Semantic Data States */
-  --color-good: #16A34A;
-  --color-warn: #D97706;
+  --color-good: #15803D;
+  --color-warn: #B45309;
   --color-bad: #DC2626;
 
-  /* Minimalist Radii */
-  --radius-card: 16px;
+  /* Balanced, Clean Radii */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 5px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-3xl: 9px;
+  --radius-card: 8px;
 }
 
 /* Base Typography, Smoothing & Mobile Viewport Lock */
@@ -65,6 +72,7 @@ html {
   max-width: 100%;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 html, body, button, input, select, textarea {
@@ -74,8 +82,9 @@ html, body, button, input, select, textarea {
 }
 
 body {
-  background-color: #FAFAFA;
-  color: #18181B;
+  background-color: #F7F8FA;
+  color: #14181F;
+  line-height: 1.55;
   overflow-x: clip;
   max-width: 100%;
   margin: 0;
@@ -89,6 +98,16 @@ body {
 
 button, a, input, select, textarea {
   touch-action: manipulation;
+}
+
+/* Clear Keyboard & Touch Accessibility Focus Rings */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #3795AE;
+  outline-offset: 2px;
 }
 
 /* Prevent iOS Safari automatic zoom when focusing inputs/selects */
@@ -110,46 +129,51 @@ button, a, input, select, textarea {
 
 .font-display {
   font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  text-wrap: balance;
 }
 
-/* Enforce clean tabular alignment without clashing monospace letterforms in KPIs */
-.font-mono {
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  font-variant-numeric: tabular-nums;
-}
-
+/* Enforce clean tabular alignment for numbers & currency */
+.font-mono,
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* Neutral Surface Level Aliases (Unified Minimalist Elevation) */
+/* Neutral Surface Level Aliases */
 .bg-level-0 {
-  background-color: #FAFAFA;
+  background-color: #F7F8FA;
 }
 .bg-level-1 {
-  background-color: #F4F4F6;
+  background-color: #F1F4F7;
 }
 .bg-level-2 {
   background-color: #FFFFFF;
 }
 .border-level-2 {
-  border-color: #EBEBED;
+  border-color: #E6EAF0;
 }
 
 /* Subtle Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #E4E4E7;
+  background: #DCE2EA;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #D4D4D8;
+  background: #C5CEDB;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Print Utilities (Preserved 100% for Dental Receipts & Reports) */

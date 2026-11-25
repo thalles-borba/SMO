@@ -63,19 +63,19 @@ export default function Financial({
 
   // DRE Filters & Custom Settings
   const [drePeriod, setDrePeriod] = useState<'current_month' | 'last_month' | 'year'>('current_month');
-  const [taxRatePercent, setTaxRatePercent] = useState<number>(6.0); // Simples Nacional default 6%
+  const [taxRatePercent, setTaxRatePercent] = useState<number>(0);
   
   // Custom fixed expenses for DRE calculations (Rent, Payroll, Utilities, etc.)
-  const [fixedRent, setFixedRent] = useState<number>(4500);
-  const [fixedUtilities, setFixedUtilities] = useState<number>(1200); // Água, Luz, Internet
-  const [fixedPayroll, setFixedPayroll] = useState<number>(6800); // ASB, Secretaria
-  const [fixedSoftware, setFixedSoftware] = useState<number>(450);
-  const [fixedMarketing, setFixedMarketing] = useState<number>(1500);
+  const [fixedRent, setFixedRent] = useState<number>(0);
+  const [fixedUtilities, setFixedUtilities] = useState<number>(0); // Água, Luz, Internet
+  const [fixedPayroll, setFixedPayroll] = useState<number>(0); // ASB, Secretaria
+  const [fixedSoftware, setFixedSoftware] = useState<number>(0);
+  const [fixedMarketing, setFixedMarketing] = useState<number>(0);
   const [showEditFixedModal, setShowEditFixedModal] = useState<boolean>(false);
 
   // CAIXA STATE
   const [selectedCaixaDate, setSelectedCaixaDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
-  const [initialBalanceMoney, setInitialBalanceMoney] = useState<number>(300.00);
+  const [initialBalanceMoney, setInitialBalanceMoney] = useState<number>(0);
   const [actualBalanceInput, setActualBalanceInput] = useState<string>('');
   const [sangriaValue, setSangriaValue] = useState<string>('0');
   const [closureNotes, setClosureNotes] = useState<string>('');
@@ -185,12 +185,42 @@ export default function Financial({
   const resultadoOperacionalLiquido = margemContribucionR$ - totalDespesasFixas;
   const margemLucrativaPercent = receitaBrutaTotal > 0 ? (resultadoOperacionalLiquido / receitaBrutaTotal) * 100 : 0;
 
-  // Comparative Monthly Chart Data for DRE
-  const monthlyChartData = [
-    { mes: 'Jan', receitas: 38000, despesas: 24000, lucro: 14000 },
-    { mes: 'Fev', receitas: 41200, despesas: 25500, lucro: 15700 },
-    { mes: 'Mar (Atual)', receitas: Math.round(receitaBrutaTotal), despesas: Math.round(custosVariaveisTotal + totalDespesasFixas), lucro: Math.round(resultadoOperacionalLiquido) }
-  ];
+  // Dynamic Comparative Monthly Chart Data for DRE (last 3 months from real transactions)
+  const monthlyChartData = (() => {
+    const monthLabels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const now = new Date();
+    const months: { year: number; month: number; label: string }[] = [];
+    for (let offset = 2; offset >= 0; offset--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      months.push({
+        year: d.getFullYear(),
+        month: d.getMonth(),
+        label: offset === 0 ? `${monthLabels[d.getMonth()]} (Atual)` : monthLabels[d.getMonth()]
+      });
+    }
+    return months.map(({ year, month, label }, idx) => {
+      if (idx === 2 && drePeriod === 'current_month') {
+        return {
+          mes: label,
+          receitas: Math.round(receitaBrutaTotal),
+          despesas: Math.round(custosVariaveisTotal + totalDespesasFixas),
+          lucro: Math.round(resultadoOperacionalLiquido)
+        };
+      }
+      const mTx = transactions.filter(t => {
+        const dt = new Date(t.date + 'T12:00:00');
+        return dt.getFullYear() === year && dt.getMonth() === month;
+      });
+      const rec = mTx.filter(t => t.type === 'receita').reduce((s, t) => s + t.value, 0);
+      const desp = mTx.filter(t => t.type === 'despesa').reduce((s, t) => s + t.value, 0);
+      return {
+        mes: label,
+        receitas: Math.round(rec),
+        despesas: Math.round(desp),
+        lucro: Math.round(rec - desp)
+      };
+    });
+  })();
 
   // Print DRE Report
   const handlePrintDRE = () => {
@@ -315,15 +345,40 @@ export default function Financial({
 
   const saldoCaixaAcumulado = totalReceitasRealizadas - totalDespesasRealizadas;
 
-  // Chart data for Fluxo de Caixa timeline
-  const cashFlowTimelineData = [
-    { data: '01/03', receitas: 8000, despesas: 1200, saldo: 6800 },
-    { data: '05/03', receitas: 11500, despesas: 3600, saldo: 14700 },
-    { data: '12/03', receitas: 17500, despesas: 5800, saldo: 26400 },
-    { data: '19/03', receitas: 27500, despesas: 7200, saldo: 35000 },
-    { data: '26/03', receitas: 37500, despesas: 8400, saldo: 29100 },
-    { data: 'Hoje', receitas: totalReceitasRealizadas, despesas: totalDespesasRealizadas, saldo: saldoCaixaAcumulado }
-  ];
+  // Dynamic chart data for Fluxo de Caixa timeline (aggregated from real transactions)
+  const cashFlowTimelineData = (() => {
+    const paidTx = transactions
+      .filter(t => t.status === 'pago' || !t.status)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    if (paidTx.length === 0) {
+      return [{ data: 'Hoje', receitas: 0, despesas: 0, saldo: 0 }];
+    }
+
+    const byDate = new Map<string, { receitas: number; despesas: number }>();
+    for (const t of paidTx) {
+      const cur = byDate.get(t.date) || { receitas: 0, despesas: 0 };
+      if (t.type === 'receita') cur.receitas += t.value;
+      else cur.despesas += t.value;
+      byDate.set(t.date, cur);
+    }
+
+    let accRec = 0;
+    let accDesp = 0;
+    return Array.from(byDate.entries()).map(([dateKey, vals]) => {
+      accRec += vals.receitas;
+      accDesp += vals.despesas;
+      const parts = dateKey.split('-');
+      const label = parts.length === 3 ? `${parts[2]}/${parts[1]}` : dateKey;
+      return {
+        data: label,
+        receitas: Math.round(accRec),
+        despesas: Math.round(accDesp),
+        saldo: Math.round(accRec - accDesp)
+      };
+    });
+  })();
 
   const handleAddNewTransactionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -346,54 +401,54 @@ export default function Financial({
   };
 
   return (
-    <div className="space-y-5 font-sans select-none pb-10">
+    <div className="space-y-6 font-sans select-none pb-10">
       {/* Top Header & Navigation Sub-Tabs */}
-      <div className="bg-white border border-[#EBEBED] p-4 sm:p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
-            <DollarSign size={18} />
+      <div className="bg-white border border-[#E6EAF0] p-4 sm:p-5 rounded-2xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+            <DollarSign size={20} />
           </div>
           <div>
-            <h2 className="font-display font-semibold text-[15px] text-[#18181B]">
-              Gestão financeira & DRE
+            <h2 className="font-display font-semibold text-base text-[#14181F]">
+              Financeiro da clínica
             </h2>
-            <p className="text-xs text-[#71717A]">
-              DRE gerencial, fechamento de caixa diário e fluxo integrado
+            <p className="text-sm text-[#647082]">
+              Escolha o que deseja ver: resumo do mês, caixa do dia ou todas as entradas e saídas
             </p>
           </div>
         </div>
 
         {/* Sub-Tabs Picker */}
-        <div className="bg-[#F4F4F6] p-1 rounded-xl flex items-center gap-1 self-stretch md:self-auto text-xs font-medium overflow-x-auto max-w-full scrollbar-none">
+        <div className="bg-[#F1F4F7] p-1.5 rounded-xl flex items-center gap-1.5 text-sm font-medium overflow-x-auto max-w-full scrollbar-none">
           <button
             onClick={() => setActiveTab('dre')}
-            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 lg:flex-initial min-h-[42px] px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'dre'
-                ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                : 'text-[#71717A] hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <PieIcon size={14} className={activeTab === 'dre' ? 'text-[#3795AE]' : ''} /> DRE Gerencial
+            <PieIcon size={15} className={activeTab === 'dre' ? 'text-[#3795AE]' : ''} /> Resumo do mês (DRE)
           </button>
           <button
             onClick={() => setActiveTab('caixa')}
-            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 lg:flex-initial min-h-[42px] px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'caixa'
-                ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                : 'text-[#71717A] hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <Wallet size={14} className={activeTab === 'caixa' ? 'text-[#3795AE]' : ''} /> Caixa Diário
+            <Wallet size={15} className={activeTab === 'caixa' ? 'text-[#3795AE]' : ''} /> Caixa do dia
           </button>
           <button
             onClick={() => setActiveTab('fluxo')}
-            className={`flex-1 md:flex-initial px-2.5 sm:px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 whitespace-nowrap ${
+            className={`flex-1 lg:flex-initial min-h-[42px] px-4 py-2 rounded-lg transition-all cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap ${
               activeTab === 'fluxo'
-                ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                : 'text-[#71717A] hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <TrendingUp size={14} className={activeTab === 'fluxo' ? 'text-[#3795AE]' : ''} /> Fluxo de Caixa
+            <TrendingUp size={15} className={activeTab === 'fluxo' ? 'text-[#3795AE]' : ''} /> Entradas e saídas
           </button>
         </div>
       </div>
@@ -663,12 +718,14 @@ export default function Financial({
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
-                <p className="font-bold text-gray-900">💡 Resumo Executivo para a Gerência:</p>
-                <p className="text-gray-600 leading-relaxed">
-                  {resultadoOperacionalLiquido >= 0
-                    ? `Sua clínica apresenta saúde financeira positiva com margem de lucro de ${margemLucrativaPercent.toFixed(1)}%. Os custos variáveis representam ${((custosVariaveisTotal/receitaBrutaTotal)*100).toFixed(1)}% do faturamento.`
-                    : 'Atenção: Os custos operacionais e variáveis superaram as receitas no período selecionado. Avalie renegociação de suprimentos ou otimização da agenda.'}
+              <div className="bg-[#F7F9FB] p-4 rounded-xl border border-[#E6EAF0] text-sm space-y-1.5">
+                <p className="font-semibold text-[#14181F]">Resumo do período</p>
+                <p className="text-[#4B5563] leading-relaxed">
+                  {receitaBrutaTotal === 0 && totalDespesasFixas === 0 && custosVariaveisTotal === 0
+                    ? 'Ainda não há lançamentos neste período. Registre entradas ou saídas para acompanhar o resultado.'
+                    : resultadoOperacionalLiquido >= 0
+                    ? `Resultado positivo com margem de ${margemLucrativaPercent.toFixed(1)}%. Os custos variáveis representam ${receitaBrutaTotal > 0 ? ((custosVariaveisTotal / receitaBrutaTotal) * 100).toFixed(1) : '0.0'}% das entradas.`
+                    : 'As despesas superaram as entradas neste período. Vale revisar os custos fixos e compras do mês.'}
                 </p>
               </div>
             </div>
@@ -695,11 +752,11 @@ export default function Financial({
 
             <div className="flex items-center gap-3 w-full md:w-auto justify-end">
               {existingClosure ? (
-                <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5">
+                <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5">
                   <CheckCircle2 size={16} /> Caixa Fechado às {existingClosure.closedAt} por {existingClosure.closedBy}
                 </span>
               ) : (
-                <span className="bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-1.5 rounded-full text-xs font-extrabold flex items-center gap-1.5">
+                <span className="bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-1.5 rounded-lg text-xs font-extrabold flex items-center gap-1.5">
                   <Clock size={16} /> Caixa Aberto (Aguardando Fechamento)
                 </span>
               )}
@@ -727,45 +784,45 @@ export default function Financial({
           )}
 
           {/* Caixa Payment Methods Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            <div className="bg-white p-4 rounded-xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">💵 DINHEIRO (GAVETEIRO)</span>
-              <p className="text-lg font-black font-display text-emerald-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#647082] block">Dinheiro na gaveta</span>
+              <p className="text-xl font-semibold font-display text-[#15803D] tabular-nums">
                 + R$ {totalIncomeMoney.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-rose-500 font-semibold">- Saídas: R$ {totalExpenseMoney.toFixed(2)}</p>
+              <p className="text-xs text-[#DC2626] tabular-nums">Saídas: R$ {totalExpenseMoney.toFixed(2)}</p>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">⚡ PIX BANCO</span>
-              <p className="text-lg font-black font-display text-[#2d8096]">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#647082] block">Pix</span>
+              <p className="text-xl font-semibold font-display text-[#1F6F85] tabular-nums">
                 R$ {totalIncomePix.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-gray-400 font-medium">Conta digital</p>
+              <p className="text-xs text-[#647082]">Recebido na conta</p>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">💳 CARTÃO CRÉD./DÉB.</span>
-              <p className="text-lg font-black font-display text-purple-600">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#647082] block">Cartão (crédito/débito)</span>
+              <p className="text-xl font-semibold font-display text-[#14181F] tabular-nums">
                 R$ {totalIncomeCard.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-gray-400 font-medium">Maquininha pós</p>
+              <p className="text-xs text-[#647082]">Maquininha</p>
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider block">📄 BOLETO / OUTROS</span>
-              <p className="text-lg font-black font-display text-gray-800">
+            <div className="bg-white p-5 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#647082] block">Boleto e outros</span>
+              <p className="text-xl font-semibold font-display text-[#14181F] tabular-nums">
                 R$ {totalIncomeOther.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-gray-400 font-medium">Bancário</p>
+              <p className="text-xs text-[#647082]">Pagamentos bancários</p>
             </div>
 
-            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 shadow-2xs space-y-1 col-span-2 sm:col-span-1">
-              <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-wider block">💰 FÍSICO ESPERADO</span>
-              <p className="text-xl font-black font-display text-emerald-700">
+            <div className="bg-[#ECFDF5] p-5 rounded-2xl border border-[#A7F3D0] space-y-1.5">
+              <span className="text-xs font-semibold text-[#065F46] block">Esperado na gaveta</span>
+              <p className="text-xl font-semibold font-display text-[#047857] tabular-nums">
                 R$ {expectedBalanceMoney.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-emerald-600 font-medium">Fundo de Troco + Entradas - Saídas</p>
+              <p className="text-xs text-[#047857]">Troco + entradas - saídas</p>
             </div>
           </div>
 
@@ -943,53 +1000,52 @@ export default function Financial({
         <div className="space-y-6">
           {/* Top Indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-emerald-600 uppercase tracking-wider block">ENTRADAS REALIZADAS (PAGAS)</span>
-              <p className="text-2xl font-black font-display text-emerald-700">
+            <div className="bg-white p-6 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#15803D] block">Entradas pagas</span>
+              <p className="text-2xl font-semibold font-display text-[#14181F] tabular-nums">
                 R$ {totalReceitasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-amber-600 font-bold">
-                + R$ {totalReceitasPendentes.toFixed(2)} pendentes a receber
+              <p className="text-xs text-[#647082] tabular-nums">
+                Pendentes: R$ {totalReceitasPendentes.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-rose-600 uppercase tracking-wider block">SAÍDAS REALIZADAS (PAGAS)</span>
-              <p className="text-2xl font-black font-display text-rose-700">
+            <div className="bg-white p-6 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#DC2626] block">Saídas pagas</span>
+              <p className="text-2xl font-semibold font-display text-[#14181F] tabular-nums">
                 R$ {totalDespesasRealizadas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-rose-500 font-bold">
-                + R$ {totalDespesasPendentes.toFixed(2)} pendentes a pagar
+              <p className="text-xs text-[#647082] tabular-nums">
+                A pagar: R$ {totalDespesasPendentes.toFixed(2)}
               </p>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-level-2 shadow-2xs space-y-1">
-              <span className="text-[10px] font-extrabold text-[#2d8096] uppercase tracking-wider block">SALDO DE CAIXA ACUMULADO</span>
-              <p className="text-2xl font-black font-display text-gray-900">
+            <div className="bg-white p-6 rounded-2xl border border-[#E6EAF0] space-y-1.5">
+              <span className="text-xs font-medium text-[#1F6F85] block">Saldo acumulado</span>
+              <p className="text-2xl font-semibold font-display text-[#14181F] tabular-nums">
                 R$ {saldoCaixaAcumulado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-[10px] text-emerald-600 font-medium">Balanço do extrato bancário + dinheiro</p>
+              <p className="text-xs text-[#647082]">Total em conta e gaveta</p>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-[#EBEBED] flex flex-col justify-between gap-3">
-              <span className="text-xs font-medium text-[#71717A] block">Novo registro</span>
+            <div className="bg-white p-6 rounded-2xl border border-[#E6EAF0] flex flex-col justify-between gap-3">
+              <span className="text-xs font-medium text-[#647082] block">Registrar movimento</span>
               <button
                 onClick={() => setShowNewTransModal(true)}
-                className="w-full py-2.5 bg-[#3795AE] text-white hover:bg-[#2B7E94] rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                className="w-full min-h-[44px] py-2.5 bg-[#3795AE] text-white hover:bg-[#2B7E94] rounded-xl font-semibold text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
               >
-                <Plus size={15} /> Lançar receita ou despesa
+                <Plus size={16} /> Nova entrada ou saída
               </button>
             </div>
           </div>
 
           {/* Cash Flow Timeline Area Chart */}
-          <div className="bg-white p-6 rounded-2xl border border-[#EBEBED] space-y-3">
+          <div className="bg-white p-6 rounded-2xl border border-[#E6EAF0] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-display font-semibold text-sm text-[#18181B]">Curva do fluxo de caixa acumulado</h3>
-                <p className="text-xs text-[#71717A] mt-0.5">Acompanhamento de entradas, saídas e saldo projetado</p>
+                <h3 className="font-display font-semibold text-base text-[#14181F]">Evolução do saldo</h3>
+                <p className="text-sm text-[#647082] mt-0.5">Acompanhe entradas, saídas e saldo ao longo das datas</p>
               </div>
-              <span className="text-xs font-medium text-[#71717A]">Março 2026</span>
             </div>
 
             <div className="h-64 w-full pt-2">
@@ -1008,7 +1064,7 @@ export default function Financial({
                     contentStyle={{
                       backgroundColor: '#FFFFFF',
                       borderColor: '#EBEBED',
-                      borderRadius: '12px',
+                      borderRadius: '6px',
                       boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
                       fontSize: '12px'
                     }}
@@ -1104,11 +1160,11 @@ export default function Financial({
                         </td>
                         <td className="py-3 px-3">
                           {t.status === 'pendente' ? (
-                            <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 w-fit">
+                            <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 w-fit">
                               <Clock size={12} /> Pendente
                             </span>
                           ) : (
-                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold flex items-center gap-1 w-fit">
+                            <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md text-[10px] font-extrabold flex items-center gap-1 w-fit">
                               <CheckCircle2 size={12} /> Pago / Confirmado
                             </span>
                           )}

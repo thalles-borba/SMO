@@ -4,18 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  ShieldCheck, 
-  CheckSquare, 
-  Square, 
-  Sparkles, 
-  CalendarDays, 
-  PenTool, 
-  AlertCircle, 
-  RefreshCw, 
-  FileText, 
+import {
+  ShieldCheck,
+  CheckSquare,
+  Square,
+  PenTool,
+  RefreshCw,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -27,116 +25,116 @@ interface ChecklistItem {
 }
 
 const CHECKLIST_ITEMS: ChecklistItem[] = [
-  // Esterilização & Autoclave
+  // Esterilização e Autoclave
   {
     id: 'san-1',
-    category: 'Esterilização & Autoclave',
-    text: 'Registro do ciclo da autoclave',
-    desc: 'Registrar data, número do ciclo, temperatura (121°C ou 134°C), pressão e tempo de exposição no livro físico/digital.'
+    category: 'Esterilização e Autoclave',
+    text: 'Registrar o ciclo da autoclave',
+    desc: 'Anotar data, número do ciclo, temperatura (121°C ou 134°C), pressão e tempo no caderno ou registro digital.'
   },
   {
     id: 'san-2',
-    category: 'Esterilização & Autoclave',
-    text: 'Indicador químico integrado (Classe 5 ou 6)',
-    desc: 'Colocar indicador químico interno em cada pacote esterilizado para certificar que a temperatura e o vapor penetraram o envelope.'
+    category: 'Esterilização e Autoclave',
+    text: 'Colocar indicador químico nos pacotes',
+    desc: 'Conferir se cada pacote esterilizado possui indicador químico interno (Classe 5 ou 6) mudando de cor.'
   },
   {
     id: 'san-3',
-    category: 'Esterilização & Autoclave',
+    category: 'Esterilização e Autoclave',
     text: 'Teste biológico semanal',
-    desc: 'Inserir ampola de esporos bacterianos (Geobacillus stearothermophilus) na autoclave e incubar por 24/48h para atestar morte microbiana.'
+    desc: 'Realizar a ampola semanal na autoclave e incubar por 24/48h conforme rotina.'
   },
   {
     id: 'san-4',
-    category: 'Esterilização & Autoclave',
-    text: 'Limpeza interna semanal da autoclave',
-    desc: 'Drenar a água antiga, limpar a câmara de aço inox com água destilada e pano que não solte fiapos para evitar oxidação.'
+    category: 'Esterilização e Autoclave',
+    text: 'Limpeza interna da autoclave',
+    desc: 'Trocar a água e limpar a parte interna com água destilada e pano sem fiapos toda semana.'
   },
 
-  // Consultórios & Superfícies
+  // Consultórios e Superfícies
   {
     id: 'san-5',
-    category: 'Consultórios & Superfícies',
-    text: 'Desinfecção de superfícies com Álcool 70%',
-    desc: 'Limpar e friccionar álcool 70% em todas as bancadas, braço do refletor, mesa de equipo e cadeira entre cada atendimento.'
+    category: 'Consultórios e Superfícies',
+    text: 'Limpar bancadas e cadeira com Álcool 70%',
+    desc: 'Friccionar álcool 70% em bancadas, braço do refletor, mesa de equipo e cadeira entre cada atendimento.'
   },
   {
     id: 'san-6',
-    category: 'Consultórios & Superfícies',
-    text: 'Troca de barreiras plásticas de proteção',
-    desc: 'Trocar o filme plástico de PVC do refletor, comandos da cadeira, painel de equipo, sugadores e canetas odontológicas a cada paciente.'
+    category: 'Consultórios e Superfícies',
+    text: 'Trocar barreiras plásticas (PVC)',
+    desc: 'Trocar o plástico de proteção do refletor, comandos da cadeira, sugadores e canetas a cada paciente.'
   },
   {
     id: 'san-7',
-    category: 'Consultórios & Superfícies',
-    text: 'Desinfecção e descarga das mangueiras de sucção',
-    desc: 'Aspirar solução desinfetante enzimática biodegradável em todas as mangueiras de sugadores ao final do período operacional.'
+    category: 'Consultórios e Superfícies',
+    text: 'Higienizar mangueiras de sucção',
+    desc: 'Passar solução desinfetante enzimática nas mangueiras de sugadores ao fim do turno.'
   },
   {
     id: 'san-8',
-    category: 'Consultórios & Superfícies',
-    text: 'Limpeza e desinfecção de pias e ralos',
-    desc: 'Verificar se as pias de atendimento estão limpas, desobstruídas e sanitizadas com hipoclorito ao final do dia.'
+    category: 'Consultórios e Superfícies',
+    text: 'Limpar pias e ralos dos consultórios',
+    desc: 'Confirmar que as pias estão limpas, desobstruídas e higienizadas ao final do dia.'
   },
 
-  // EPIs & Higiene da Equipe
+  // Proteção da Equipe (EPIs)
   {
     id: 'san-9',
-    category: 'EPIs & Higiene da Equipe',
-    text: 'Paramentação completa da equipe',
-    desc: 'Uso obrigatório de jaleco impermeável, máscara de proteção (PFF2/N95 ou cirúrgica dupla), óculos de segurança, gorro e luvas descartáveis.'
+    category: 'Proteção da Equipe (EPIs)',
+    text: 'Uso completo de EPIs durante atendimentos',
+    desc: 'Jaleco, máscara, óculos de proteção, gorro e luvas descartáveis em todos os atendimentos.'
   },
   {
     id: 'san-10',
-    category: 'EPIs & Higiene da Equipe',
-    text: 'Higienização das mãos (Técnica de 7 passos)',
-    desc: 'Lavar as mãos com sabonete antisséptico líquido antes e após calçar as luvas, seguido de aplicação de álcool gel 70%.'
+    category: 'Proteção da Equipe (EPIs)',
+    text: 'Higienização correta das mãos',
+    desc: 'Lavar as mãos com sabonete antisséptico antes e depois das luvas e finalizar com álcool 70%.'
   },
   {
     id: 'san-11',
-    category: 'EPIs & Higiene da Equipe',
-    text: 'Remoção completa de adornos clínicos',
-    desc: 'Garantir que nenhum profissional use anéis, alianças, pulseiras, relógios ou colares durante o atendimento (exigência da NR-32).'
+    category: 'Proteção da Equipe (EPIs)',
+    text: 'Atendimento sem anéis, pulseiras ou relógios',
+    desc: 'Garantir que a equipe esteja sem adornos nas mãos e punhos durante o atendimento.'
   },
 
-  // Gestão de Resíduos & Perfurocortantes
+  // Lixo e Descarte Seguro
   {
     id: 'san-12',
-    category: 'Gestão de Resíduos & Perfurocortantes',
-    text: 'Coleta de lixo biológico (Saco Branco)',
-    desc: 'Descartar gases, algodões e luvas contaminadas em lixeira acionada por pedal com saco leitoso identificado de resíduos do Grupo A.'
+    category: 'Lixo e Descarte Seguro',
+    text: 'Lixo contaminado em saco branco identificado',
+    desc: 'Descartar gases, algodões e luvas usadas na lixeira de pedal com saco branco leitoso.'
   },
   {
     id: 'san-13',
-    category: 'Gestão de Resíduos & Perfurocortantes',
-    text: 'Segurança com Perfurocortantes (Descarpack)',
-    desc: 'Verificar se as caixas coletoras estão fixadas em suporte próprio, longe de pias e trocadas antes de atingir a linha limite de 2/3.'
+    category: 'Lixo e Descarte Seguro',
+    text: 'Caixa de perfurocortantes dentro do limite',
+    desc: 'Conferir se a caixa Descarpack está fixa no suporte e abaixo da linha limite (2/3).'
   },
   {
     id: 'san-14',
-    category: 'Gestão de Resíduos & Perfurocortantes',
-    text: 'Ausência de recapeamento manual de agulhas',
-    desc: 'Proibir terminantemente o recapeamento ativo de agulhas com as duas mãos. Usar técnicas de recapeamento passivo ou dispositivo próprio.'
+    category: 'Lixo e Descarte Seguro',
+    text: 'Descarte seguro de agulhas sem recapar com as mãos',
+    desc: 'Não recapar agulhas manualmente com as duas mãos; usar o suporte ou descarte direto.'
   },
 
-  // Documentação & Licenças
+  // Documentos da Clínica
   {
     id: 'san-15',
-    category: 'Documentação & Licenças',
-    text: 'Exibição de Alvará Sanitário Atualizado',
-    desc: 'Manter a licença expedida pela Vigilância Sanitária local em local visível ao público geral na recepção da clínica.'
+    category: 'Documentos da Clínica',
+    text: 'Alvará sanitário atualizado e visível',
+    desc: 'Manter a licença sanitária em dia e em local visível na recepção.'
   },
   {
     id: 'san-16',
-    category: 'Documentação & Licenças',
-    text: 'Contrato de Coleta de Resíduos (PGRSS)',
-    desc: 'Comprovante semestral de destinação final e coleta por empresa certificada de resíduos odontológicos infectantes e químicos.'
+    category: 'Documentos da Clínica',
+    text: 'Comprovante de coleta de resíduos em dia',
+    desc: 'Confirmar que o contrato e os comprovantes de coleta especializada estão atualizados.'
   },
   {
     id: 'san-17',
-    category: 'Documentação & Licenças',
-    text: 'Certificado de controle integrado de pragas',
-    desc: 'Certificado de dedetização e desratização anual ou semestral realizado em todas as salas e depósitos da clínica.'
+    category: 'Documentos da Clínica',
+    text: 'Certificado de dedetização válido',
+    desc: 'Verificar se o controle de pragas da clínica está dentro da validade.'
   }
 ];
 
@@ -152,51 +150,28 @@ interface LogAssinatura {
 export default function Sanitizacao() {
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [responsavelName, setResponsavelName] = useState('');
-  const [cargo, setCargo] = useState('Gerente');
+  const [cargo, setCargo] = useState('Funcionário');
   const [logs, setLogs] = useState<LogAssinatura[]>([]);
   const [successSign, setSuccessSign] = useState<string | null>(null);
   const [viewInfoId, setViewInfoId] = useState<string | null>(null);
 
-  // Load from LocalStorage
   useEffect(() => {
     const savedChecks = localStorage.getItem('clinica_sanitizacao_checks');
     if (savedChecks) {
-      setCheckedIds(JSON.parse(savedChecks));
+      try {
+        setCheckedIds(JSON.parse(savedChecks));
+      } catch {
+        setCheckedIds([]);
+      }
     }
 
     const savedLogs = localStorage.getItem('clinica_sanitizacao_logs');
     if (savedLogs) {
-      setLogs(JSON.parse(savedLogs));
-    } else {
-      // Seed some historic compliance logs
-      const seedLogs: LogAssinatura[] = [
-        {
-          id: 'log-1',
-          data: '2024-03-15',
-          horario: '18:15',
-          responsavel: 'Dra. Ana Silva',
-          cargo: 'Gerente / Gestora Clínica',
-          conformidade: 100
-        },
-        {
-          id: 'log-2',
-          data: '2024-03-16',
-          horario: '18:00',
-          responsavel: 'Mariana Santos',
-          cargo: 'Funcionária / Secretária',
-          conformidade: 94
-        },
-        {
-          id: 'log-3',
-          data: '2024-03-17',
-          horario: '17:45',
-          responsavel: 'Dra. Ana Silva',
-          cargo: 'Gerente / Gestora Clínica',
-          conformidade: 100
-        }
-      ];
-      setLogs(seedLogs);
-      localStorage.setItem('clinica_sanitizacao_logs', JSON.stringify(seedLogs));
+      try {
+        setLogs(JSON.parse(savedLogs));
+      } catch {
+        setLogs([]);
+      }
     }
   }, []);
 
@@ -219,14 +194,11 @@ export default function Sanitizacao() {
     localStorage.setItem('clinica_sanitizacao_checks', JSON.stringify([]));
   };
 
-  // Group items by category
   const categories = Array.from(new Set(CHECKLIST_ITEMS.map(item => item.category)));
-
   const totalItemsCount = CHECKLIST_ITEMS.length;
   const checkedCount = checkedIds.length;
   const compliancePercent = Math.round((checkedCount / totalItemsCount) * 100);
 
-  // Submit Daily Audit Signature
   const handleSignSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!responsavelName.trim()) return;
@@ -239,8 +211,8 @@ export default function Sanitizacao() {
       id: 'log-' + Math.random().toString(36).substring(2, 9),
       data: dataFormatted,
       horario: horarioFormatted,
-      responsavel: responsavelName,
-      cargo: cargo === 'Gerente' ? 'Gerente / Gestora Clínica' : 'Funcionária / Auxiliar',
+      responsavel: responsavelName.trim(),
+      cargo,
       conformidade: compliancePercent
     };
 
@@ -248,16 +220,13 @@ export default function Sanitizacao() {
     setLogs(updatedLogs);
     localStorage.setItem('clinica_sanitizacao_logs', JSON.stringify(updatedLogs));
 
-    setSuccessSign(`Auditoria de conformidade sanitária assinada digitalmente por ${responsavelName}!`);
+    setSuccessSign(`Conferência de hoje assinada por ${responsavelName.trim()}!`);
     setTimeout(() => setSuccessSign(null), 5000);
-
-    // Clear form but keep checklist for reference, or reset? Let's keep checklist checked as is
     setResponsavelName('');
   };
 
-  // Delete signature log
   const handleDeleteLog = (id: string) => {
-    if (window.confirm("Deseja mesmo excluir este registro de auditoria histórico?")) {
+    if (window.confirm('Deseja excluir este registro de assinatura?')) {
       const updated = logs.filter(l => l.id !== id);
       setLogs(updated);
       localStorage.setItem('clinica_sanitizacao_logs', JSON.stringify(updated));
@@ -265,191 +234,159 @@ export default function Sanitizacao() {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto w-full select-none font-sans">
-      
+    <div className="space-y-7 sm:space-y-8 w-full select-none font-sans">
       {/* Success Banner */}
       <AnimatePresence>
         {successSign && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="bg-good/10 border border-good text-good text-sm font-bold p-4 rounded-lg flex items-center gap-3 shadow-xs"
+            exit={{ opacity: 0, y: -8 }}
+            className="bg-[#ECFDF5] border border-[#A7F3D0] text-[#15803D] text-sm font-semibold px-5 py-4 rounded-2xl flex items-center gap-3"
           >
-            <CheckCircle size={18} />
+            <CheckCircle size={20} className="shrink-0" />
             <span>{successSign}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Stats Header Banner */}
-      <div className="flex flex-col md:flex-row justify-between items-stretch gap-6">
-        
-        {/* Compliance Progress Card */}
-        <div className="flex-1 bg-white border border-level-2 rounded-card p-6 shadow-sm flex flex-col md:flex-row items-center gap-6">
-          
-          {/* Circular compliance visualizer */}
-          <div className="relative w-32 h-32 shrink-0 flex items-center justify-center">
-            {/* SVG circle track */}
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="64"
-                cy="64"
-                r="54"
-                className="stroke-level-1"
-                strokeWidth="8"
-                fill="transparent"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="54"
-                className="stroke-primary transition-all duration-700"
-                strokeWidth="10"
-                strokeDasharray={`${2 * Math.PI * 54}`}
-                strokeDashoffset={`${2 * Math.PI * 54 * (1 - compliancePercent / 100)}`}
-                strokeLinecap="round"
-                fill="transparent"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <span className="font-mono text-3xl font-bold text-on-surface">{compliancePercent}</span>
-              <span className="text-sm font-semibold text-on-surface-variant">%</span>
-              <p className="text-[9px] uppercase tracking-wider text-on-surface-variant font-bold mt-0.5">Conforme</p>
+      {/* Top Step-by-Step Progress Card */}
+      <section className="bg-white border border-[#E6EAF0] rounded-2xl p-6 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="space-y-3 flex-1 min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h2 className="font-display font-semibold text-lg text-[#14181F]">
+                Conferência diária de limpeza e biossegurança
+              </h2>
+              <p className="text-sm text-[#647082]">
+                Toque nos itens abaixo conforme for conferindo e assine ao final do dia.
+              </p>
             </div>
           </div>
 
-          <div className="space-y-3 text-center md:text-left flex-1">
-            <div className="flex items-center justify-center md:justify-start gap-2">
-              <ShieldCheck className="text-primary" size={22} />
-              <h2 className="font-display font-bold text-lg text-on-surface">Auditoria Sanitária Preventiva</h2>
+          <div className="space-y-2 pt-1 max-w-xl">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-[#374151] tabular-nums">
+                {checkedCount} de {totalItemsCount} itens conferidos
+              </span>
+              <span
+                className={`font-semibold tabular-nums ${
+                  compliancePercent === 100
+                    ? 'text-[#15803D]'
+                    : compliancePercent >= 60
+                    ? 'text-[#3795AE]'
+                    : 'text-[#B45309]'
+                }`}
+              >
+                {compliancePercent}% concluído
+              </span>
             </div>
-            <p className="text-xs text-on-surface-variant font-medium leading-relaxed max-w-lg">
-              Checklist oficial obrigatório de rotina para atendimento odontológico clínico segundo regras da <strong className="text-[#3795AE]">Vigilância Sanitária (ANVISA)</strong>. Mantenha os registros sempre assinados e em dia para vistorias oficiais periódicas.
-            </p>
-            
-            <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-              <button 
-                onClick={checkAll}
-                className="bg-primary/10 hover:bg-primary/20 text-primary font-bold text-[11px] px-3.5 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer"
-              >
-                ✓ Marcar todos como Conforme
-              </button>
-              <button 
-                onClick={resetAll}
-                className="border border-outline-variant hover:bg-level-1 text-on-surface-variant font-semibold text-[11px] px-3.5 py-2 rounded-lg transition-all active:scale-[0.98] cursor-pointer"
-              >
-                Limpar todos
-              </button>
+            <div className="w-full h-2.5 bg-[#F1F4F7] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  compliancePercent === 100 ? 'bg-[#15803D]' : 'bg-[#3795AE]'
+                }`}
+                style={{ width: `${compliancePercent}%` }}
+              />
             </div>
           </div>
         </div>
 
-        {/* Right side minimalist status card */}
-        <div className="w-full md:w-80 bg-white border border-[#EBEBED] rounded-2xl p-6 flex flex-col justify-between gap-4">
-          <div className="space-y-2">
-            <span className="text-xs font-medium text-[#3795AE]">Status geral</span>
-            <h3 className="font-display font-semibold text-lg text-[#18181B]">
-              {compliancePercent === 100
-                ? 'Clínica 100% conforme'
-                : compliancePercent >= 80
-                  ? 'Alto índice de conformidade'
-                  : 'Ajustes necessários'}
-            </h3>
-            <p className="text-xs text-[#71717A] leading-relaxed">
-              {compliancePercent === 100
-                ? 'Todos os parâmetros de vigilância e esterilização estão conformes para operações e vistorias da ANVISA.'
-                : `${checkedCount} de ${totalItemsCount} controles validados hoje. Conclua as pendências antes do encerramento do turno.`}
-            </p>
-          </div>
-          <div className="pt-3 border-t border-[#F1F1F3] flex justify-between items-center text-xs">
-            <span className="text-[#71717A]">Último teste biológico</span>
-            <span className="bg-[#ECFDF5] text-[#16A34A] px-2.5 py-0.5 rounded-md text-[11px] font-semibold">
-              Negativo (OK)
-            </span>
-          </div>
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={checkAll}
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap"
+          >
+            Marcar todos
+          </button>
+          <button
+            type="button"
+            onClick={resetAll}
+            className="min-h-[44px] px-4 py-2.5 rounded-xl bg-white hover:bg-[#F7F8FA] border border-[#DCE2EA] text-[#4B5563] text-sm font-medium inline-flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap"
+          >
+            <RefreshCw size={15} />
+            <span>Desmarcar todos</span>
+          </button>
         </div>
-      </div>
+      </section>
 
-      {/* Main List Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left Side: Category Accordion Checks */}
-        <div className="lg:col-span-2 space-y-5">
-          {categories.map((cat, catIdx) => {
-            const catItems = CHECKLIST_ITEMS.filter(item => item.category === cat);
-            const catCheckedCount = catItems.filter(item => checkedIds.includes(item.id)).length;
-            const isCatComplete = catCheckedCount === catItems.length;
+      {/* Main Content: Spacious Checklist + Signature Card */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-7 items-start">
+        {/* Left 8 columns: Clean Categorized Checklist */}
+        <div className="xl:col-span-8 space-y-6">
+          {categories.map(category => {
+            const items = CHECKLIST_ITEMS.filter(item => item.category === category);
+            const doneInCat = items.filter(i => checkedIds.includes(i.id)).length;
 
             return (
-              <section key={catIdx} className="bg-white border border-[#EBEBED] rounded-2xl p-5 space-y-4">
-                <div className="flex justify-between items-center border-b border-[#F1F1F3] pb-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display font-semibold text-sm text-[#18181B]">{cat}</h3>
-                  </div>
-                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-md tabular-nums ${isCatComplete ? 'bg-[#ECFDF5] text-[#16A34A]' : 'bg-[#3795AE]/10 text-[#3795AE]'}`}>
-                    {catCheckedCount} de {catItems.length} conformes
+              <section key={category} className="bg-white border border-[#E6EAF0] rounded-2xl overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#ECEFF3] flex items-center justify-between gap-3 bg-[#F8FAFC]">
+                  <h3 className="font-display font-semibold text-[15.5px] text-[#14181F]">
+                    {category}
+                  </h3>
+                  <span className="text-[13px] font-medium text-[#647082] tabular-nums">
+                    {doneInCat} de {items.length} feitos
                   </span>
                 </div>
 
-                <div className="divide-y divide-level-1">
-                  {catItems.map((item) => {
+                <div className="divide-y divide-[#ECEFF3]">
+                  {items.map(item => {
                     const isChecked = checkedIds.includes(item.id);
-                    const isViewingInfo = viewInfoId === item.id;
+                    const isInfoOpen = viewInfoId === item.id;
+
                     return (
-                      <div key={item.id} className="py-3 flex flex-col gap-2">
-                        <div className="flex items-start gap-3">
-                          <button 
+                      <div
+                        key={item.id}
+                        className={`transition-colors ${isChecked ? 'bg-[#F8FCFA]' : 'bg-white'}`}
+                      >
+                        <div className="px-5 sm:px-6 py-4 flex items-start gap-4">
+                          <button
+                            type="button"
                             onClick={() => toggleCheck(item.id)}
-                            className="mt-0.5 text-primary hover:text-primary-container shrink-0 cursor-pointer"
+                            className="flex-1 flex items-start gap-3.5 text-left cursor-pointer min-w-0"
                           >
-                            {isChecked ? (
-                              <CheckSquare className="text-primary fill-primary/5" size={19} />
-                            ) : (
-                              <Square className="text-on-surface-variant hover:text-primary" size={19} />
-                            )}
+                            <span className="mt-0.5 shrink-0">
+                              {isChecked ? (
+                                <CheckSquare size={22} className="text-[#15803D]" />
+                              ) : (
+                                <Square size={22} className="text-[#94A0B2]" />
+                              )}
+                            </span>
+                            <span
+                              className={`text-[15px] leading-snug ${
+                                isChecked
+                                  ? 'text-[#647082] line-through'
+                                  : 'text-[#14181F] font-medium'
+                              }`}
+                            >
+                              {item.text}
+                            </span>
                           </button>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span 
-                                onClick={() => toggleCheck(item.id)}
-                                className={`text-xs font-bold leading-normal cursor-pointer ${
-                                  isChecked ? 'text-on-surface-variant line-through opacity-85' : 'text-on-surface'
-                                }`}
-                              >
-                                {item.text}
-                              </span>
-                              <button 
-                                onClick={() => setViewInfoId(isViewingInfo ? null : item.id)}
-                                className="text-on-surface-variant hover:text-primary cursor-pointer p-0.5"
-                                title="Mostrar requisitos e orientações regulatórias detalhadas"
-                              >
-                                <HelpCircle size={12} className="opacity-60" />
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-on-surface-variant font-medium mt-0.5">
-                              {item.desc}
-                            </p>
-                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setViewInfoId(isInfoOpen ? null : item.id)}
+                            className="shrink-0 h-9 px-2.5 rounded-lg text-xs font-medium text-[#647082] hover:text-[#3795AE] hover:bg-[#F1F4F7] inline-flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Ver orientação"
+                          >
+                            <HelpCircle size={15} />
+                            <span className="hidden sm:inline">Como fazer</span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform ${isInfoOpen ? 'rotate-180' : ''}`}
+                            />
+                          </button>
                         </div>
 
-                        {/* Interactive info container */}
-                        <AnimatePresence>
-                          {isViewingInfo && (
-                            <motion.div 
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="overflow-hidden"
-                            >
-                              <div className="bg-level-1/50 border border-level-2 p-3 rounded-lg text-[10px] text-on-surface-variant font-medium space-y-1.5 ml-8 mt-1">
-                                <p className="text-primary font-bold">Roteiro Regulatório ANVISA:</p>
-                                <p>• O descumprimento deste parâmetro em inspeções oficiais pode acarretar em multas administrativas, advertências ou interdição temporária da sala clínica.</p>
-                                <p>• <strong>Evidência Recomendada:</strong> Guarde sempre os envelopes datados e testados por pelo menos 5 anos em arquivo morto de esterilização.</p>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                        {isInfoOpen && (
+                          <div className="px-6 pb-4 pl-14 text-[13.5px] text-[#4B5563] leading-relaxed">
+                            {item.desc}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -459,113 +396,107 @@ export default function Sanitizacao() {
           })}
         </div>
 
-        {/* Right Side: Log Auditoria & Assinatura */}
-        <div className="space-y-6">
-          
-          {/* Sign Auditoria Daily Audit */}
-          <section className="bg-white border border-level-2 rounded-xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-level-2 pb-3">
-              <PenTool className="text-primary" size={17} />
-              <h3 className="font-display font-bold text-sm text-on-surface">Assinar Livro de Auditoria</h3>
-            </div>
-            
-            <p className="text-[11px] text-on-surface-variant font-medium leading-relaxed">
-              Ao final do turno, o responsável técnico ou administrativo deve conferir a conformidade sanitária e registrar a assinatura digital de controle no banco de dados.
-            </p>
-
-            <form onSubmit={handleSignSubmit} className="space-y-3.5">
+        {/* Right 4 columns: Signature Form + Signed History */}
+        <div className="xl:col-span-4 space-y-6">
+          <section className="bg-white border border-[#E6EAF0] rounded-2xl p-6 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center shrink-0">
+                <PenTool size={18} />
+              </div>
               <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Nome do Responsável</label>
+                <h3 className="font-display font-semibold text-base text-[#14181F]">
+                  Assinar conferência de hoje
+                </h3>
+                <p className="text-[13px] text-[#647082] mt-0.5">
+                  Salve quem fez a verificação hoje para manter o histórico em dia.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSignSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  Seu nome
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Mariana Santos"
+                  placeholder="Digite seu nome completo"
                   value={responsavelName}
-                  onChange={(e) => setResponsavelName(e.target.value)}
-                  className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-bold"
+                  onChange={e => setResponsavelName(e.target.value)}
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE]"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Cargo / Função</label>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">
+                  Sua função
+                </label>
                 <select
                   value={cargo}
-                  onChange={(e) => setCargo(e.target.value)}
-                  className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-semibold"
+                  onChange={e => setCargo(e.target.value)}
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE]"
                 >
-                  <option value="Gerente">Gerente / Dra. Ana Silva</option>
-                  <option value="Funcionaria">Funcionária / Colaborador</option>
+                  <option value="Funcionário">Funcionário</option>
+                  <option value="Dentista">Dentista</option>
+                  <option value="Gestão">Gestão</option>
                 </select>
-              </div>
-
-              <div className="bg-level-1/60 p-3 rounded-lg flex items-center justify-between text-xs font-semibold">
-                <span className="text-on-surface-variant">Índice Concluído:</span>
-                <span className={`font-mono font-bold ${compliancePercent === 100 ? 'text-good' : 'text-primary'}`}>
-                  {compliancePercent}% Conforme
-                </span>
               </div>
 
               <button
                 type="submit"
-                disabled={checkedCount === 0}
-                className={`w-full py-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
-                  checkedCount > 0
-                    ? 'bg-primary hover:bg-primary-container text-on-primary shadow-xs cursor-pointer active:scale-95'
-                    : 'bg-level-1 text-on-surface-variant border border-level-2 cursor-not-allowed opacity-65'
-                }`}
+                className="w-full min-h-[48px] bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer"
               >
-                <PenTool size={13} />
-                <span>Registrar Assinatura Digital</span>
+                Registrar assinatura de hoje ({compliancePercent}%)
               </button>
             </form>
           </section>
 
-          {/* History of Audit signatures */}
-          <section className="bg-white border border-level-2 rounded-xl p-5 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 border-b border-level-2 pb-3">
-              <CalendarDays className="text-primary" size={17} />
-              <h3 className="font-display font-bold text-sm text-on-surface">Histórico de Assinaturas</h3>
+          {/* Signed History */}
+          <section className="bg-white border border-[#E6EAF0] rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#ECEFF3] flex items-center justify-between">
+              <h3 className="font-display font-semibold text-[15px] text-[#14181F]">
+                Últimas assinaturas
+              </h3>
+              <span className="text-xs text-[#647082] tabular-nums">{logs.length} registros</span>
             </div>
 
-            {logs.length === 0 ? (
-              <p className="text-[11px] text-on-surface-variant py-4 text-center">Nenhuma assinatura registrada ainda.</p>
-            ) : (
-              <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
-                {logs.map((log) => (
-                  <div key={log.id} className="p-3 bg-level-1/30 border border-level-2 rounded-lg text-xs relative group">
-                    <div className="flex justify-between items-start gap-4">
-                      <div>
-                        <p className="font-bold text-on-surface">{log.responsavel}</p>
-                        <p className="text-[10px] text-on-surface-variant font-semibold mt-0.5">{log.cargo}</p>
-                        <p className="text-[9px] text-on-surface-variant font-mono mt-1">{log.data} às {log.horario}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className={`inline-block px-1.5 py-0.5 rounded font-mono font-bold text-[10px] ${
-                          log.conformidade === 100 
-                            ? 'bg-good/10 text-good' 
-                            : 'bg-primary/10 text-primary'
-                        }`}>
-                          {log.conformidade}% OK
-                        </span>
-                        
-                        <button
-                          onClick={() => handleDeleteLog(log.id)}
-                          className="block text-[10px] text-red-600 hover:underline mt-1.5 font-bold cursor-pointer text-right ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          Excluir
-                        </button>
-                      </div>
+            <div className="divide-y divide-[#ECEFF3] max-h-[380px] overflow-y-auto">
+              {logs.length === 0 ? (
+                <div className="p-8 text-center text-sm text-[#647082]">
+                  Nenhuma conferência assinada ainda.
+                </div>
+              ) : (
+                logs.map(log => (
+                  <div key={log.id} className="px-6 py-4 flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#14181F] truncate">{log.responsavel}</p>
+                      <p className="text-xs text-[#647082] tabular-nums">
+                        {log.data.split('-').reverse().join('/')} às {log.horario} · {log.cargo}
+                      </p>
+                      <p
+                        className={`text-xs font-semibold tabular-nums ${
+                          log.conformidade === 100 ? 'text-[#15803D]' : 'text-[#B45309]'
+                        }`}
+                      >
+                        {log.conformidade}% dos itens conferidos
+                      </p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteLog(log.id)}
+                      className="w-9 h-9 rounded-lg text-[#94A0B2] hover:text-[#DC2626] hover:bg-[#FEF2F2] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                      title="Excluir assinatura"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </section>
-
         </div>
-
       </div>
-
     </div>
   );
 }

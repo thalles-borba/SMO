@@ -26,6 +26,36 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import ScheduleView from './ScheduleView';
 
+function DoctorAvatar({ name, avatar, size = 'md' }: { name: string; avatar?: string; size?: 'sm' | 'md' | 'lg' }) {
+  const initials = name
+    .replace(/^(Dra?\.?\s+)/i, '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(p => p[0]?.toUpperCase() || '')
+    .join('') || 'D';
+  const dim =
+    size === 'lg' ? 'w-20 h-20 text-xl' : size === 'sm' ? 'w-9 h-9 text-xs' : 'w-11 h-11 text-sm';
+
+  if (avatar && !avatar.includes('unsplash.com')) {
+    return (
+      <img
+        src={avatar}
+        alt={name}
+        referrerPolicy="no-referrer"
+        className={`${dim} rounded-full object-cover border border-[#E6EAF0] shrink-0`}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${dim} rounded-full bg-[#3795AE]/12 text-[#1F6F85] font-semibold flex items-center justify-center shrink-0 border border-[#3795AE]/20`}
+    >
+      {initials}
+    </div>
+  );
+}
+
 interface DoctorsProps {
   doctors: Doctor[];
   transactions: Transaction[];
@@ -81,8 +111,8 @@ export default function Doctors({
   const [newDocCro, setNewDocCro] = useState('');
   const [newDocEmail, setNewDocEmail] = useState('');
   const [newDocTarget, setNewDocTarget] = useState('15000');
-  const [newDocEvaluations, setNewDocEvaluations] = useState('15');
-  const [newDocClosures, setNewDocClosures] = useState('8');
+  const [newDocEvaluations, setNewDocEvaluations] = useState('0');
+  const [newDocClosures, setNewDocClosures] = useState('0');
 
   useEffect(() => {
     if (isFuncionario && activeTab !== 'escala') {
@@ -212,27 +242,17 @@ export default function Doctors({
     e.preventDefault();
     if (!newDocName.trim() || !newDocSpecialty.trim()) return;
 
-    // Doctor Avatars Selection List
-    const doctorAvatars = [
-      'https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=200',
-      'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200',
-      'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=200',
-      'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=200',
-      'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200'
-    ];
-    const avatar = doctorAvatars[doctors.length % doctorAvatars.length];
-
     onAddDoctor({
-      name: newDocName,
-      avatar,
+      name: newDocName.trim(),
+      avatar: '',
       role: newDocRole,
       monthlyTarget: parseFloat(newDocTarget) || 15000,
       currentEarnings: 0,
-      specialty: newDocSpecialty,
-      cro: newDocCro || 'CRO-SP ' + Math.floor(10000 + Math.random() * 90000),
-      email: newDocEmail || `${newDocName.toLowerCase().replace(/\s+/g, '.')}@clinica.com`,
-      evaluations: parseInt(newDocEvaluations) || 10,
-      closures: parseInt(newDocClosures) || 5
+      specialty: newDocSpecialty.trim(),
+      cro: newDocCro.trim() || 'CRO pendente',
+      email: newDocEmail.trim() || '',
+      evaluations: parseInt(newDocEvaluations) || 0,
+      closures: parseInt(newDocClosures) || 0
     });
 
     // Reset fields
@@ -241,8 +261,8 @@ export default function Doctors({
     setNewDocCro('');
     setNewDocEmail('');
     setNewDocTarget('15000');
-    setNewDocEvaluations('15');
-    setNewDocClosures('8');
+    setNewDocEvaluations('0');
+    setNewDocClosures('0');
     setShowAddModal(false);
   };
 
@@ -250,32 +270,31 @@ export default function Doctors({
     <div className="space-y-6 max-w-[1400px] mx-auto w-full select-none">
       
       {/* Navigation Sub-Header Tabs */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-[#EBEBED]">
-        <div className="flex items-center gap-1 bg-[#F4F4F6] p-1 rounded-xl w-full sm:w-auto overflow-x-auto scrollbar-none">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-[#E6EAF0]">
+        <div className="flex items-center gap-1.5 bg-[#F1F4F7] p-1.5 rounded-xl w-full sm:w-auto overflow-x-auto scrollbar-none">
           {!isFuncionario && (
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+              className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
                 activeTab === 'overview'
-                  ? 'bg-white text-[#18181B] shadow-xs'
-                  : 'text-[#71717A] hover:text-[#18181B]'
+                  ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                  : 'text-[#647082] hover:text-[#14181F]'
               }`}
             >
-              <Users size={14} className={activeTab === 'overview' ? 'text-[#3795AE]' : ''} />
-              <span>{isDentista ? 'Meu Desempenho' : 'Desempenho & Metas'}</span>
+              <Users size={16} className={activeTab === 'overview' ? 'text-[#3795AE]' : ''} />
+              <span>{isDentista ? 'Meu desempenho' : 'Desempenho e metas'}</span>
             </button>
           )}
           <button
             onClick={() => setActiveTab('escala')}
-            className={`flex-1 sm:flex-initial px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            className={`flex-1 sm:flex-initial min-h-[40px] px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer ${
               activeTab === 'escala'
-                ? 'bg-white text-[#18181B] shadow-xs'
-                : 'text-[#71717A] hover:text-[#18181B]'
+                ? 'bg-white text-[#14181F] font-semibold shadow-2xs'
+                : 'text-[#647082] hover:text-[#14181F]'
             }`}
           >
-            <CalendarDays size={14} className={activeTab === 'escala' ? 'text-[#3795AE]' : ''} />
-            <span>Escala</span>
-            <span className="hidden sm:inline">dos Consultórios</span>
+            <CalendarDays size={16} className={activeTab === 'escala' ? 'text-[#3795AE]' : ''} />
+            <span>Escala dos consultórios</span>
           </button>
         </div>
 
@@ -283,9 +302,9 @@ export default function Doctors({
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <button
               onClick={() => setShowAddModal(true)}
-              className="w-full sm:w-auto justify-center px-3.5 py-2 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-2 cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] justify-center px-4 py-2.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold rounded-xl transition-colors flex items-center gap-2 cursor-pointer"
             >
-              <UserPlus size={15} />
+              <UserPlus size={16} />
               <span>Cadastrar dentista</span>
             </button>
           </div>
@@ -314,15 +333,10 @@ export default function Doctors({
                       : 'border-[#EBEBED] hover:border-[#D4D4D8] text-[#18181B]'
                   }`}
                 >
-                  <img
-                    src={doc.avatar}
-                    alt={doc.name}
-                    referrerPolicy="no-referrer"
-                    className="w-11 h-11 rounded-full object-cover border border-[#EBEBED] shrink-0"
-                  />
+                  <DoctorAvatar name={doc.name} avatar={doc.avatar} size="md" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-[13.5px] text-[#18181B] truncate">{doc.name}</h4>
-                    <p className="text-[11px] text-[#71717A] truncate font-medium mt-0.5">{doc.specialty}</p>
+                    <h4 className="font-semibold text-sm text-[#14181F] truncate">{doc.name}</h4>
+                    <p className="text-xs text-[#647082] truncate mt-0.5">{doc.specialty}</p>
                     
                     {/* Micro goal bar */}
                     <div className="mt-2 flex items-center justify-between text-[11px] text-[#71717A] font-medium tabular-nums">
@@ -380,20 +394,19 @@ export default function Doctors({
         <div className="bg-white rounded-card border border-level-2 p-6 flex flex-col justify-between shadow-xs space-y-6">
           <div className="space-y-4">
             <div className="flex flex-col items-center text-center relative">
-              <img
-                src={selectedDoc.avatar}
-                alt={selectedDoc.name}
-                referrerPolicy="no-referrer"
-                className="w-24 h-24 rounded-full object-cover border-4 border-level-1 shadow-sm mb-3"
-              />
-              <h3 className="font-display font-bold text-base text-on-surface">{selectedDoc.name}</h3>
-              <p className="text-xs text-primary font-bold uppercase tracking-wider">{selectedDoc.specialty}</p>
-              
-              <div className="flex items-center gap-1.5 mt-2 text-xs text-on-surface-variant font-medium">
-                <Mail size={13} />
-                <span>{selectedDoc.email}</span>
+              <div className="mb-3">
+                <DoctorAvatar name={selectedDoc.name} avatar={selectedDoc.avatar} size="lg" />
               </div>
-              <div className="text-[11px] text-on-surface-variant font-mono bg-level-1 px-2.5 py-1 rounded-full mt-2 border border-level-2">
+              <h3 className="font-display font-semibold text-lg text-[#14181F]">{selectedDoc.name}</h3>
+              <p className="text-sm text-[#1F6F85] font-medium mt-0.5">{selectedDoc.specialty}</p>
+              
+              {selectedDoc.email && (
+                <div className="flex items-center gap-1.5 mt-2 text-xs text-[#647082]">
+                  <Mail size={14} />
+                  <span>{selectedDoc.email}</span>
+                </div>
+              )}
+              <div className="text-xs text-[#647082] tabular-nums bg-[#F7F9FB] px-3 py-1 rounded-lg mt-2 border border-[#E6EAF0]">
                 {selectedDoc.cro}
               </div>
             </div>
@@ -470,7 +483,7 @@ export default function Doctors({
                     Digitar
                   </button>
                 ) : null}
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                   docConversionRate >= 65 ? 'bg-good/10 text-good' : docConversionRate >= 45 ? 'bg-amber-500/10 text-amber-600' : 'bg-red-500/10 text-red-600'
                 }`}>
                   {docConversionRate}% Conversão
@@ -680,26 +693,23 @@ export default function Doctors({
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-card border border-level-2 p-12 text-center shadow-xs flex flex-col items-center justify-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
-            <UserPlus size={28} />
+        <div className="bg-white rounded-2xl border border-[#E6EAF0] p-10 sm:p-12 text-center flex flex-col items-center justify-center space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-[#3795AE]/10 text-[#3795AE] flex items-center justify-center">
+            <UserPlus size={26} />
           </div>
-          <div className="space-y-1 max-w-sm">
-            <h3 className="font-display font-bold text-base text-on-surface">Nenhuma Dentista Cadastrada</h3>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              Não há nenhuma profissional cadastrada no sistema de gerenciamento clínico atualmente.
-            </p>
-            <p className="text-[11px] text-on-surface-variant leading-relaxed">
-              Cadastre sua primeira cirurgiã-dentista para poder definir metas, acompanhar faturamento, registrar atendimentos e monitorar o funil de avaliações e fechamentos.
+          <div className="space-y-1.5 max-w-md">
+            <h3 className="font-display font-semibold text-lg text-[#14181F]">Nenhuma dentista cadastrada</h3>
+            <p className="text-sm text-[#647082] leading-relaxed">
+              Cadastre a primeira dentista da equipe para acompanhar metas mensais, atendimentos realizados e taxa de fechamentos.
             </p>
           </div>
           {isGestao && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-primary hover:bg-primary/90 text-on-primary font-bold px-5 py-2 rounded-xl text-xs transition-all cursor-pointer shadow-sm active:scale-95 flex items-center gap-2"
+              className="min-h-[46px] bg-[#3795AE] hover:bg-[#2B7E94] text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors cursor-pointer flex items-center gap-2"
             >
-              <Plus size={14} />
-              <span>Cadastrar Primeira Dentista</span>
+              <Plus size={16} />
+              <span>Cadastrar primeira dentista</span>
             </button>
           )}
         </div>
@@ -713,7 +723,7 @@ export default function Doctors({
             <h3 className="font-display font-bold text-base text-on-surface">Painel Geral de Avaliações e Conversões</h3>
             <p className="text-xs text-on-surface-variant font-medium mt-0.5">Visão consolidada do funil de vendas e conversão de consultas para todas as dentistas.</p>
           </div>
-          <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+          <span className="text-[10px] font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-md uppercase tracking-wider">
             Consolidado Mensal
           </span>
         </div>
@@ -826,14 +836,10 @@ export default function Doctors({
                       }`}
                     >
                       <td className="p-3.5 pl-5 flex items-center gap-3">
-                        <img 
-                          src={doc.avatar} 
-                          alt={doc.name} 
-                          className="w-8 h-8 rounded-full object-cover border border-level-2"
-                        />
+                        <DoctorAvatar name={doc.name} avatar={doc.avatar} size="sm" />
                         <div>
-                          <p className="text-on-surface font-bold">{doc.name}</p>
-                          <p className="text-[10px] text-on-surface-variant">{doc.cro}</p>
+                          <p className="text-[#14181F] font-semibold">{doc.name}</p>
+                          <p className="text-xs text-[#647082]">{doc.cro}</p>
                         </div>
                       </td>
                       <td className="p-3.5 text-on-surface-variant font-semibold">{doc.specialty}</td>
@@ -892,127 +898,128 @@ export default function Doctors({
       {/* MODAL: ADD DENTIST / CADASTRO */}
       <AnimatePresence>
         {showAddModal && (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-card border border-level-2 w-full max-w-md p-6 shadow-xl relative"
+              exit={{ scale: 0.97, opacity: 0 }}
+              className="bg-white rounded-2xl border border-[#E6EAF0] w-full max-w-md p-6 sm:p-7 shadow-xl relative"
             >
               <button
                 onClick={() => setShowAddModal(false)}
-                className="absolute right-4 top-4 text-on-surface-variant hover:text-on-surface text-lg font-bold cursor-pointer"
+                className="absolute right-4 top-4 w-9 h-9 rounded-xl text-[#647082] hover:text-[#14181F] hover:bg-[#F1F4F7] flex items-center justify-center text-xl cursor-pointer"
+                aria-label="Fechar"
               >
                 ×
               </button>
 
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-display font-bold text-lg text-primary">Cadastrar Nova Dentista</h3>
-                  <p className="text-xs text-on-surface-variant mt-0.5">Cadastre o perfil profissional da nova especialista de sua equipe e defina metas iniciais.</p>
+              <div className="space-y-5">
+                <div className="pr-8">
+                  <h3 className="font-display font-semibold text-lg text-[#14181F]">Cadastrar nova dentista</h3>
+                  <p className="text-sm text-[#647082] mt-1">Preencha os dados da profissional e a meta mensal inicial.</p>
                 </div>
 
                 <form onSubmit={handleAddDoctorSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Nome Completo</label>
+                    <label className="block text-sm font-medium text-[#374151] mb-1.5">Nome completo *</label>
                     <input
                       type="text"
                       required
-                      placeholder="Ex: Dra. Mariana Costa"
+                      placeholder="Ex: Dra. Nome Sobrenome"
                       value={newDocName}
                       onChange={(e) => setNewDocName(e.target.value)}
-                      className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-semibold"
+                      className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Especialidade Principal</label>
+                      <label className="block text-sm font-medium text-[#374151] mb-1.5">Especialidade *</label>
                       <input
                         type="text"
                         required
                         placeholder="Ex: Ortodontia"
                         value={newDocSpecialty}
                         onChange={(e) => setNewDocSpecialty(e.target.value)}
-                        className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">CRO (Nº Registro)</label>
+                      <label className="block text-sm font-medium text-[#374151] mb-1.5">CRO</label>
                       <input
                         type="text"
                         placeholder="Ex: CRO-SP 12345"
                         value={newDocCro}
                         onChange={(e) => setNewDocCro(e.target.value)}
-                        className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">E-mail Profissional</label>
+                    <label className="block text-sm font-medium text-[#374151] mb-1.5">E-mail (opcional)</label>
                     <input
                       type="email"
-                      placeholder="Ex: mariana.costa@clinica.com"
+                      placeholder="dentista@clinica.com"
                       value={newDocEmail}
                       onChange={(e) => setNewDocEmail(e.target.value)}
-                      className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3.5 py-2.5 text-sm text-[#14181F] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                     />
                   </div>
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Meta Mensal (R$)</label>
+                      <label className="block text-xs font-medium text-[#374151] mb-1.5">Meta mensal (R$)</label>
                       <input
                         type="number"
                         required
-                        min="5000"
-                        step="1000"
+                        min="0"
+                        step="500"
                         value={newDocTarget}
                         onChange={(e) => setNewDocTarget(e.target.value)}
-                        className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono text-center font-bold"
+                        className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3 py-2.5 text-sm text-[#14181F] tabular-nums text-center font-medium focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Avaliações/Mês</label>
+                      <label className="block text-xs font-medium text-[#374151] mb-1.5">Avaliações</label>
                       <input
                         type="number"
                         required
                         min="0"
                         value={newDocEvaluations}
                         onChange={(e) => setNewDocEvaluations(e.target.value)}
-                        className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono text-center"
+                        className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3 py-2.5 text-sm text-[#14181F] tabular-nums text-center focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-on-surface-variant mb-1 uppercase tracking-wide">Fechamentos/Mês</label>
+                      <label className="block text-xs font-medium text-[#374151] mb-1.5">Fechamentos</label>
                       <input
                         type="number"
                         required
                         min="0"
                         value={newDocClosures}
                         onChange={(e) => setNewDocClosures(e.target.value)}
-                        className="w-full bg-level-2 border border-outline-variant rounded-lg p-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono text-center"
+                        className="w-full min-h-[44px] bg-white border border-[#D9E0E8] rounded-xl px-3 py-2.5 text-sm text-[#14181F] tabular-nums text-center focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
                       />
                     </div>
                   </div>
 
-                  <div className="pt-4 flex gap-2">
+                  <div className="pt-2 flex gap-3">
                     <button
                       type="button"
                       onClick={() => setShowAddModal(false)}
-                      className="flex-1 py-2 rounded-lg border border-outline-variant text-xs font-bold text-on-surface-variant hover:bg-level-1"
+                      className="flex-1 min-h-[46px] py-2.5 rounded-xl border border-[#D9E0E8] text-sm font-medium text-[#374151] hover:bg-[#F7F9FB] cursor-pointer"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-2 bg-primary hover:bg-primary-container text-on-primary text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+                      className="flex-1 min-h-[46px] py-2.5 bg-[#3795AE] hover:bg-[#2B7E94] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
                     >
-                      Cadastrar Dentista
+                      Cadastrar
                     </button>
                   </div>
                 </form>

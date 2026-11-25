@@ -33,9 +33,9 @@ export default function History({ transactions, onDeleteTransaction }: HistoryPr
   const [typeFilter, setTypeFilter] = useState<'all' | 'receita' | 'despesa'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'Consultas' | 'Procedimentos' | 'Materiais'>('all');
   const [selectedReceiptTrans, setSelectedReceiptTrans] = useState<Transaction | null>(null);
-  const [clientName, setClientName] = useState('Mariana de Oliveira');
-  const [clientCPF, setClientCPF] = useState('321.456.987-11');
-  const [clientPhone, setClientPhone] = useState('11999999999');
+  const [clientName, setClientName] = useState('');
+  const [clientCPF, setClientCPF] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
@@ -72,7 +72,7 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
         clientCPF: clientCPF || '',
         valueStr: formattedVal,
         description: selectedReceiptTrans.description,
-        doctorName: selectedReceiptTrans.doctorName || 'Dra. Ana Silva',
+        doctorName: selectedReceiptTrans.doctorName || 'Seja Mais Odontologia',
         paymentMethod: selectedReceiptTrans.category || 'Consulta/Procedimento'
       },
       filename,
@@ -98,7 +98,7 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
       clientCPF: clientCPF || '',
       valueStr: formattedVal,
       description: selectedReceiptTrans.description,
-      doctorName: selectedReceiptTrans.doctorName || 'Dra. Ana Silva',
+      doctorName: selectedReceiptTrans.doctorName || 'Seja Mais Odontologia',
       paymentMethod: selectedReceiptTrans.category || 'Consulta/Procedimento'
     });
 
@@ -125,54 +125,57 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
   });
 
   return (
-    <div className="space-y-5 w-full">
+    <div className="space-y-6 w-full">
       {/* Search & Filter Header bar */}
-      <div className="bg-white border border-[#EBEBED] rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
+      <div className="bg-white border border-[#E6EAF0] rounded-2xl p-5 sm:p-6 flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center">
         {/* Search */}
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A1A1AA]" size={15} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#94A0B2]" size={17} />
           <input
             type="text"
-            placeholder="Pesquise por procedimento, materiais ou dentista..."
+            placeholder="Pesquisar por procedimento, material ou dentista..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-[#FAFAFA] border border-[#E4E4E7] rounded-xl pl-9 pr-4 py-2 text-sm text-[#18181B] placeholder:text-[#A1A1AA] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+            className="w-full min-h-[44px] bg-[#F7F8FA] border border-[#DCE2EA] rounded-xl pl-11 pr-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:bg-white focus:border-[#3795AE]"
           />
         </div>
 
         {/* Filters panel */}
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-3 items-center">
           {/* Filter Type */}
-          <div className="flex bg-[#F4F4F6] p-1 rounded-xl text-xs font-medium text-[#71717A]">
+          <div className="flex bg-[#F1F4F7] p-1 rounded-xl text-[13.5px] font-medium text-[#647082]">
             <button
+              type="button"
               onClick={() => setTypeFilter('all')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
                 typeFilter === 'all'
-                  ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                  : 'hover:text-[#18181B]'
+                  ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                  : 'hover:text-[#14181F]'
               }`}
             >
               Todos
             </button>
             <button
+              type="button"
               onClick={() => setTypeFilter('receita')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
                 typeFilter === 'receita'
-                  ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                  : 'hover:text-[#18181B]'
+                  ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                  : 'hover:text-[#14181F]'
               }`}
             >
-              Receitas
+              Entradas
             </button>
             <button
+              type="button"
               onClick={() => setTypeFilter('despesa')}
-              className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer ${
                 typeFilter === 'despesa'
-                  ? 'bg-white text-[#18181B] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
-                  : 'hover:text-[#18181B]'
+                  ? 'bg-white text-[#14181F] font-semibold shadow-xs'
+                  : 'hover:text-[#14181F]'
               }`}
             >
-              Despesas
+              Saídas
             </button>
           </div>
 
@@ -180,9 +183,9 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as any)}
-            className="bg-white border border-[#E4E4E7] rounded-xl px-3 py-2 text-xs font-medium text-[#3F3F46] focus:outline-none focus:border-[#3795AE] focus:ring-2 focus:ring-[#3795AE]/15"
+            className="min-h-[44px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2 text-sm font-medium text-[#374151] focus:outline-none focus:border-[#3795AE]"
           >
-            <option value="all">Todas categorias</option>
+            <option value="all">Todas as categorias</option>
             <option value="Consultas">Consultas</option>
             <option value="Procedimentos">Procedimentos</option>
             <option value="Materiais">Materiais</option>
@@ -191,13 +194,13 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
       </div>
 
       {/* Main Transactions Log Table */}
-      <div className="bg-white border border-[#EBEBED] rounded-2xl overflow-hidden">
+      <div className="bg-white border border-[#E6EAF0] rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-[#F8F8FA] border-b border-[#F1F1F3] text-xs font-medium text-[#71717A]">
-                <th className="py-3.5 px-6 font-medium">Data</th>
-                <th className="py-3.5 px-6 font-medium">Descrição</th>
+              <tr className="bg-[#F8FAFC] border-b border-[#ECEFF3] text-[13px] font-medium text-[#647082]">
+                <th className="py-4 px-6 font-medium">Data</th>
+                <th className="py-4 px-6 font-medium">Descrição</th>
                 <th className="py-3.5 px-6 font-medium">Responsável</th>
                 <th className="py-3.5 px-6 font-medium">Categoria</th>
                 <th className="py-3.5 px-6 font-medium text-right">Valor</th>
@@ -410,7 +413,7 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
                     <p className="text-[9px] text-gray-400 font-medium pl-0.5 mt-1">CNPJ: 44.245.543/0001-44 • Tel: (11) 5575-9000</p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[10px] font-bold text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-full uppercase tracking-wider">
+                    <span className="text-[10px] font-bold text-gray-900 bg-gray-50 border border-gray-200 px-3 py-1 rounded-md uppercase tracking-wider">
                       Recibo Oficial
                     </span>
                     <p className="text-[9px] text-gray-500 font-mono mt-2 font-bold">Nº ODO-{selectedReceiptTrans.id.toUpperCase()}</p>
@@ -439,9 +442,7 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
                     <div className="space-y-1">
                       <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Profissional Responsável</p>
                       <p className="font-bold text-gray-950">{selectedReceiptTrans.doctorName}</p>
-                      <p className="text-[9px] text-gray-500 font-bold font-mono">CRO-SP: {
-                        selectedReceiptTrans.doctorName === 'Dra. Karen Borba' ? '98765' : '10432'
-                      }</p>
+                      <p className="text-[9px] text-gray-500 font-bold font-mono">Seja Mais Odontologia</p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Beneficiário / Paciente</p>
