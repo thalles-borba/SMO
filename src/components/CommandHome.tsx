@@ -1155,9 +1155,20 @@ export default function CommandHome({
         })
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: any = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        data = null;
+      }
 
-      if (!response.ok) {
+      if (!response.ok || !data) {
+        const errorMsg =
+          data?.error ||
+          (response.status === 404
+            ? 'O endpoint da IA (/api/gemini/command) ainda não está ativo neste servidor. Faça o deploy atualizado e configure a chave GEMINI_API_KEY.'
+            : 'O servidor da IA retornou uma resposta inesperada. Tente novamente em instantes.');
         setEntries(prev => [
           ...prev,
           {
@@ -1165,7 +1176,7 @@ export default function CommandHome({
             prompt: text,
             reply: '',
             actions: [],
-            error: data?.error || 'Não foi possível concluir o pedido agora.',
+            error: errorMsg,
             timestamp
           }
         ]);
