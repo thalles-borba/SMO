@@ -33,10 +33,14 @@ export const ALL_CLINIC_TOOLS: FunctionDeclaration[] = [
     parameters: {
       type: Type.OBJECT,
       properties: {
+        patientName: {
+          type: Type.STRING,
+          description: 'Nome do paciente relacionado ao lançamento, quando mencionado (opcional).',
+        },
         description: {
           type: Type.STRING,
           description:
-            'Descrição clara do lançamento (ex: "Consulta de avaliação - Maria Silva", "Conta de energia").',
+            'Descrição clara do lançamento (ex: "Consulta de avaliação", "Limpeza", "Conta de energia").',
         },
         value: {
           type: Type.NUMBER,
@@ -405,6 +409,7 @@ function isTransientOverload(error: any): boolean {
     msg.includes('unavailable') ||
     msg.includes('high demand') ||
     msg.includes('overloaded') ||
+    msg.includes('timeout') ||
     msg.includes('503')
   );
 }
@@ -432,9 +437,8 @@ async function generateWithFallback(
   params: { contents: any; config: any }
 ) {
   const attempts: Array<{ model: string; thinkingLevel?: ThinkingLevel; timeoutMs: number }> = [
-    { model: 'gemini-4-hydrogen', thinkingLevel: ThinkingLevel.LOW, timeoutMs: 9000 },
-    { model: 'gemini-3.1-flash-lite', timeoutMs: 12000 },
-    { model: 'gemini-4-hydrogen', thinkingLevel: ThinkingLevel.LOW, timeoutMs: 12000 },
+    { model: 'gemini-4-hydrogen', thinkingLevel: ThinkingLevel.LOW, timeoutMs: 5500 },
+    { model: 'gemini-3.1-flash-lite', timeoutMs: 9000 },
   ];
 
   let lastError: any = null;

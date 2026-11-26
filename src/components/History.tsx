@@ -117,8 +117,11 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
 
   // Filter transactions
   const filteredTransactions = transactions.filter(t => {
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          t.doctorName.toLowerCase().includes(searchTerm.toLowerCase());
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      (t.patientName && t.patientName.toLowerCase().includes(q)) ||
+      t.description.toLowerCase().includes(q) ||
+      t.doctorName.toLowerCase().includes(q);
     const matchesType = typeFilter === 'all' || t.type === typeFilter;
     const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
     return matchesSearch && matchesType && matchesCategory;
@@ -233,7 +236,9 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
                               <ArrowDownLeft size={13} />
                             </span>
                           )}
-                          <span className="text-[#18181B] truncate font-medium">{item.description}</span>
+                          <span className="text-[#18181B] truncate font-medium">
+                            {item.patientName ? `${item.patientName} · ${item.description}` : item.description}
+                          </span>
                         </div>
                       </td>
                       <td className="py-3.5 px-6 text-[#52525B] text-xs">{item.doctorName}</td>
@@ -261,7 +266,10 @@ Agradecemos a confiança em nossos serviços de saúde bucal!`;
                         <div className="flex items-center justify-center gap-1">
                           {isRevenue && (
                             <button
-                              onClick={() => setSelectedReceiptTrans(item)}
+                              onClick={() => {
+                                setClientName(item.patientName || '');
+                                setSelectedReceiptTrans(item);
+                              }}
                               className="p-1.5 rounded-lg hover:bg-[#F4F4F6] text-[#71717A] hover:text-[#3795AE] transition-colors cursor-pointer"
                               title="Emitir recibo de atendimento"
                             >

@@ -59,6 +59,7 @@ export default function Overview({
   const [recentSearch, setRecentSearch] = useState('');
 
   // Form states
+  const [patientName, setPatientName] = useState('');
   const [description, setDescription] = useState('');
   const [doctorName, setDoctorName] = useState(doctors[0]?.name || '');
   const [value, setValue] = useState('');
@@ -170,6 +171,7 @@ export default function Overview({
       .filter(
         t =>
           !q ||
+          (t.patientName && t.patientName.toLowerCase().includes(q)) ||
           t.description.toLowerCase().includes(q) ||
           t.doctorName.toLowerCase().includes(q) ||
           t.category.toLowerCase().includes(q)
@@ -182,6 +184,7 @@ export default function Overview({
     if (!description || !value) return;
 
     onAddTransaction({
+      patientName: patientName.trim() || undefined,
       description,
       doctorName: type === 'despesa' ? 'Administração' : doctorName || 'Clínica',
       value: parseFloat(value),
@@ -189,6 +192,7 @@ export default function Overview({
       type
     });
 
+    setPatientName('');
     setDescription('');
     setValue('');
     setShowAddModal(false);
@@ -914,7 +918,11 @@ export default function Overview({
                         <span className="font-medium text-[#14181F]">{t.doctorName}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-[#374151] max-w-[280px] truncate">{t.description}</td>
+                    <td className="py-4 px-4 text-[#374151] max-w-[280px]">
+                      <div className="truncate font-medium text-[#14181F]">
+                        {t.patientName ? `${t.patientName} · ${t.description}` : t.description}
+                      </div>
+                    </td>
                     <td className="py-4 px-4 text-[#647082] whitespace-nowrap">{t.category}</td>
                     <td className="py-4 px-4 text-right font-semibold text-[#14181F] tabular-nums whitespace-nowrap">
                       {t.type === 'despesa' ? '− ' : ''}R$ {t.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -994,6 +1002,18 @@ export default function Overview({
                     Saída (Despesa)
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[13px] font-medium text-[#374151] mb-1.5">Nome do paciente</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  placeholder="Ex: Maria da Silva (opcional)"
+                  value={patientName}
+                  onChange={e => setPatientName(e.target.value)}
+                  className="w-full min-h-[46px] bg-white border border-[#DCE2EA] rounded-xl px-4 py-2.5 text-sm text-[#14181F] placeholder:text-[#94A0B2] focus:outline-none focus:border-[#3795AE]"
+                />
               </div>
 
               <div>

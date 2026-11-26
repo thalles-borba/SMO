@@ -6,6 +6,7 @@
 export interface Transaction {
   id: string;
   date: string;
+  patientName?: string;
   description: string;
   doctorName: string;
   value: number;

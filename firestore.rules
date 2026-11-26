@@ -168,11 +168,12 @@ service cloud.firestore {
 
     function isValidTransaction(data, clinicId, txId) {
       return data.keys().hasAll(['id', 'clinicId', 'ownerId', 'date', 'description', 'doctorName', 'value', 'category', 'type', 'createdAt', 'updatedAt'])
-        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'date', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'clinicId', 'ownerId', 'date', 'patientName', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'createdAt', 'updatedAt'])
         && isValidId(data.id) && data.id == txId
         && isValidId(data.clinicId) && data.clinicId == clinicId
         && isValidId(data.ownerId)
         && data.date is string && data.date.size() >= 4 && data.date.size() <= 20
+        && (!('patientName' in data) || (data.patientName is string && data.patientName.size() <= 120))
         && data.description is string && data.description.size() >= 1 && data.description.size() <= 300
         && data.doctorName is string && data.doctorName.size() >= 1 && data.doctorName.size() <= 120
         && data.value is number && data.value >= 0
@@ -459,7 +460,7 @@ service cloud.firestore {
           && incoming().createdAt == existing().createdAt
           && incoming().updatedAt == request.time
           && isClinicGestao(clinicId)
-          && incoming().diff(existing()).affectedKeys().hasOnly(['date', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'updatedAt']);
+          && incoming().diff(existing()).affectedKeys().hasOnly(['date', 'patientName', 'description', 'doctorName', 'value', 'category', 'type', 'supplier', 'subcategory', 'paymentMethod', 'status', 'dueDate', 'updatedAt']);
 
         allow delete: if isVerifiedUser() && isValidId(clinicId) && isValidId(transactionId) && isClinicGestao(clinicId);
       }

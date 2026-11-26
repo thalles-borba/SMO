@@ -364,7 +364,10 @@ export default function CommandHome({
         const status: 'pago' | 'pendente' = args.status === 'pendente' ? 'pendente' : 'pago';
         const date = args.date || todayStr;
 
+        const patientName = args.patientName ? String(args.patientName).trim() : undefined;
+
         onAddTransaction({
+          patientName,
           description: String(args.description),
           value,
           type,
@@ -380,7 +383,7 @@ export default function CommandHome({
           id,
           ok: true,
           title: type === 'receita' ? 'Receita registrada' : 'Despesa registrada',
-          detail: `${args.description} · ${formatCurrency(value)} · ${category} (${paymentMethod})`,
+          detail: `${patientName ? `${patientName} · ` : ''}${args.description} · ${formatCurrency(value)} · ${category} (${paymentMethod})`,
           targetTab: 'financeiro',
           targetTabLabel: 'Ver no Financeiro'
         };
@@ -1164,11 +1167,26 @@ export default function CommandHome({
       }
 
       if (!response.ok || !data) {
-        const errorMsg =
-          data?.error ||
-          (response.status === 404
-            ? 'O endpoint da IA (/api/gemini/command) ainda não está ativo neste servidor. Faça o deploy atualizado e configure a chave GEMINI_API_KEY.'
-            : 'O servidor da IA retornou uma resposta inesperada. Tente novamente em instantes.');
+        const trimmedRaw = rawText.trim();
+        const isHtmlResponse =
+          trimmedRaw.startsWith('<!DOCTYPE') ||
+          trimmedRaw.startsWith('<html') ||
+          trimmedRaw.startsWith('<HTML');
+
+        let errorMsg = data?.error;
+        if (!errorMsg) {
+          if (response.status === 404 || (response.ok && isHtmlResponse)) {
+            errorMsg =
+              'O serviço da IA (/api/gemini/command) ainda não está ativo neste endereço. Publique o deploy atualizado e configure a variável GEMINI_API_KEY no servidor.';
+          } else if (response.status === 504) {
+            errorMsg =
+              'A IA demorou mais que o normal para responder (tempo esgotado). Tente enviar o pedido novamente.';
+          } else if (response.status >= 500) {
+            errorMsg = `Erro interno no servidor da IA (HTTP ${response.status}). Tente novamente em instantes ou verifique a variável GEMINI_API_KEY no servidor.`;
+          } else {
+            errorMsg = `O servidor da IA retornou uma resposta inesperada (HTTP ${response.status}). Tente novamente em instantes.`;
+          }
+        }
         setEntries(prev => [
           ...prev,
           {
@@ -1264,7 +1282,7 @@ export default function CommandHome({
               onChange={e => setQuery(e.target.value)}
               placeholder={isListening ? 'Ouvindo seu pedido...' : placeholderText}
               disabled={isProcessing}
-              className="flex-1 min-w-0 bg-transparent text-[15.5px] text-[#14181F] placeholder:text-[#8E95A0] px-1 focus:outline-none disabled:opacity-60"
+              className="flex-1 min-w-0 bg-transparent text-[15.5px] text-[#14181F] placeholder:text-[#8E95A0] px-1 border-0 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] disabled:opacity-60"
               autoComplete="off"
             />
 

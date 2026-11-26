@@ -88,6 +88,7 @@ export default function Financial({
   // Quick Caixa Movement Form State
   const [showQuickCaixaModal, setShowQuickCaixaModal] = useState<boolean>(false);
   const [caixaType, setCaixaType] = useState<'receita' | 'despesa'>('receita');
+  const [caixaPatientName, setCaixaPatientName] = useState<string>('');
   const [caixaDescription, setCaixaDescription] = useState<string>('');
   const [caixaValue, setCaixaValue] = useState<string>('');
   const [caixaPaymentMethod, setCaixaPaymentMethod] = useState<'Dinheiro' | 'Pix' | 'Cartão de Crédito' | 'Cartão de Débito' | 'Boleto'>('Dinheiro');
@@ -102,6 +103,7 @@ export default function Financial({
   // New Transaction Modal State
   const [showNewTransModal, setShowNewTransModal] = useState<boolean>(false);
   const [transType, setTransType] = useState<'receita' | 'despesa'>('receita');
+  const [transPatientName, setTransPatientName] = useState<string>('');
   const [transDesc, setTransDesc] = useState<string>('');
   const [transValue, setTransValue] = useState<string>('');
   const [transCategory, setTransCategory] = useState<string>('Procedimentos');
@@ -292,6 +294,7 @@ export default function Financial({
     if (!caixaValue || parseFloat(caixaValue) <= 0) return;
 
     onAddTransaction({
+      patientName: caixaPatientName.trim() || undefined,
       description: caixaDescription || (caixaType === 'receita' ? 'Entrada Avulsa de Caixa' : 'Saída Avulsa de Caixa'),
       value: parseFloat(caixaValue),
       type: caixaType,
@@ -302,6 +305,7 @@ export default function Financial({
       date: selectedCaixaDate
     });
 
+    setCaixaPatientName('');
     setCaixaDescription('');
     setCaixaValue('');
     setShowQuickCaixaModal(false);
@@ -319,6 +323,7 @@ export default function Financial({
     if (fluxoSearch.trim() !== '') {
       const q = fluxoSearch.toLowerCase();
       return (
+        (t.patientName && t.patientName.toLowerCase().includes(q)) ||
         t.description.toLowerCase().includes(q) ||
         t.doctorName.toLowerCase().includes(q) ||
         t.category.toLowerCase().includes(q)
@@ -385,6 +390,7 @@ export default function Financial({
     if (!transValue || parseFloat(transValue) <= 0) return;
 
     onAddTransaction({
+      patientName: transPatientName.trim() || undefined,
       description: transDesc || 'Lançamento Financeiro',
       value: parseFloat(transValue),
       type: transType,
@@ -395,6 +401,7 @@ export default function Financial({
       date: transDate
     });
 
+    setTransPatientName('');
     setTransDesc('');
     setTransValue('');
     setShowNewTransModal(false);
@@ -1147,6 +1154,11 @@ export default function Financial({
                           {t.date}
                         </td>
                         <td className="py-3 px-3 font-bold text-gray-900">
+                          {t.patientName && (
+                            <span className="block text-[11px] text-[#3795AE] font-semibold">
+                              Paciente: {t.patientName}
+                            </span>
+                          )}
                           {t.description}
                           {t.supplier && <span className="block text-[10px] text-gray-400 font-normal">Forn: {t.supplier}</span>}
                         </td>
@@ -1319,11 +1331,23 @@ export default function Financial({
               </div>
 
               <div>
+                <label className="block text-gray-700 font-bold mb-1">Nome do Paciente:</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  placeholder="Ex: Maria da Silva (opcional)"
+                  value={caixaPatientName}
+                  onChange={e => setCaixaPatientName(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                />
+              </div>
+
+              <div>
                 <label className="block text-gray-700 font-bold mb-1">Descrição do Lançamento: *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Pagamento Consulta Paciente João"
+                  placeholder="Ex: Pagamento Consulta"
                   value={caixaDescription}
                   onChange={e => setCaixaDescription(e.target.value)}
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
@@ -1418,6 +1442,18 @@ export default function Financial({
                 >
                   - Despesa
                 </button>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-bold mb-1">Nome do Paciente:</label>
+                <input
+                  type="text"
+                  maxLength={120}
+                  placeholder="Ex: Maria da Silva (opcional)"
+                  value={transPatientName}
+                  onChange={e => setTransPatientName(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-900"
+                />
               </div>
 
               <div>

@@ -100,14 +100,16 @@ button, a, input, select, textarea {
   touch-action: manipulation;
 }
 
-/* Clear Keyboard & Touch Accessibility Focus Rings */
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid #3795AE;
-  outline-offset: 2px;
+@layer base {
+  /* Clear Keyboard Accessibility Focus Rings (overridable by Tailwind utilities) */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #3795AE;
+    outline-offset: 2px;
+  }
 }
 
 /* Prevent iOS Safari automatic zoom when focusing inputs/selects */

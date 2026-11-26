@@ -88,6 +88,7 @@
         "clinicId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "ownerId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
         "date": { "type": "string", "maxLength": 20 },
+        "patientName": { "type": "string", "maxLength": 120 },
         "description": { "type": "string", "minLength": 1, "maxLength": 300 },
         "doctorName": { "type": "string", "minLength": 1, "maxLength": 120 },
         "value": { "type": "number" },

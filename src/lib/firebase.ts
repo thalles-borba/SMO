@@ -313,6 +313,9 @@ function sanitizeEntityPayload(
         category: clampString(raw.category, 80, 'Outros'),
         type: raw.type === 'despesa' ? 'despesa' : 'receita',
       };
+      if (raw.patientName && typeof raw.patientName === 'string' && raw.patientName.trim()) {
+        payload.patientName = clampString(raw.patientName, 120);
+      }
       if (raw.supplier && typeof raw.supplier === 'string') {
         payload.supplier = clampString(raw.supplier, 120);
       }
